@@ -720,16 +720,20 @@ def add_heterologous_pathway(model, additions, ignore_repeats=False, copy=False)
         if model.id == 'Ecoli_core_model' and (additions in core_designs):
             model = add_pathway(model, *core_designs[additions],
                                 check_mass_balance=True,
+                                check_charge_balance=False,
                                 ignore_repeats=ignore_repeats)
         if model.id == 'MODELID_1461534' and (additions in iJR904_designs):
             model = add_pathway(model, *iJR904_designs[additions],
                                 check_mass_balance=True,
+                                check_charge_balance=False,
                                 ignore_repeats=ignore_repeats)
         if 'iAF1260' in model.id and (additions in iAF1260_designs):
             model = add_pathway(model, *iAF1260_designs[additions],
                                 check_mass_balance=True,
+                                check_charge_balance=False,
                                 ignore_repeats=ignore_repeats)
         return add_pathway(model, *designs[additions], check_mass_balance=True,
+                           check_charge_balance=False,
                            ignore_repeats=ignore_repeats)
     elif additions == 'none':
         return model

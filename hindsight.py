@@ -133,8 +133,7 @@ def minimize_maximize(model, target_exchange_id, substrate_reaction_ids,
                       min_biomass=get_min_biomass(), biomass_fraction=0.9999,
                       calculate_yield=True):
     """Perform a single flux variablity analysis."""
-    biomass_reaction = [x for x in model.reactions
-                        if x.objective_coefficient!=0][0]
+    biomass_reaction = model.objective.keys()[0]
 
     model.optimize()
     if model.solution.f is None:
@@ -155,13 +154,13 @@ def minimize_maximize(model, target_exchange_id, substrate_reaction_ids,
         biomass_reaction.lower_bound = biomass_fraction * gr
         # max and min
         model.change_objective(target_exchange_id)
-        model.optimize(objective_sense='minimize')
-        minmax = (model.solution.f,)
-        model.optimize(objective_sense='maximize')
-        minmax = minmax + (model.solution.f,)
+        min_sol = model.optimize(objective_sense='minimize')
+        minmax = (min_sol.f,)
+        max_sol = optimize_minimal_flux(model, objective_sense='maximize')
+        minmax = minmax + (max_sol.f,)
         # get secretions
-        max_secretion = get_secretion(model, model.solution.x_dict)
-        max_flux = model.solution.x_dict
+        max_secretion = get_secretion(model, max_sol.x_dict)
+        max_flux = max_sol.x_dict
         if calculate_yield:
             # get sur
             if not isinstance(substrate_reaction_ids, list):
@@ -455,6 +454,81 @@ def get_model(model, additions, substrate, target, aerobicity, deletions_b,
     return (model, substrate_exchange_ids, specific_bounds, target_exchange_id,
             reaction_knockouts, greedy_knockouts, not_in_model)
 
+
+def run_simulation(series, gene_ko=False, loaded_models=None):
+    """run_simulation
+
+    Uses the keys: ['Additions', 'Substrate', 'Target', 'Aerobicity', 'Deletions_b']
+
+    If any of the following keys are already in the series, it will throw an error:
+
+    ['target_exchange' 'reaction_knockouts', 'greedy_knockouts', 'not_in_model',
+    'substrate_exchange', 'specific_bounds', 'gr', 'gr_no_ngam',
+    'absolute_max_product', 'additions_pathway_flux', 'min', 'max', 'yield_min',
+    'yield_max', 'secretion', 'flux', 'error']
+
+    """
+    # gene ko in model name
+    if 'gene_ko' in series.name[2]:
+        gene_ko = True
+
+    # copy the model
+    model = loaded_models[series.name[2]].copy()
+
+    def an_error(err):
+        """Error as series"""
+        return series.append(pd.Series({'error': str(err)}))
+
+    try:
+        (model, substrate_exchange_ids, specific_bounds, target_exchange_id,
+         reaction_knockouts, greedy_knockouts, not_in_model) = get_model(model,
+                                                                         series['Additions'],
+                                                                         series['Substrate'],
+                                                                         series['Target'],
+                                                                         series['Aerobicity'],
+                                                                         series['Deletions_b'],
+                                                                         gene_ko=gene_ko)
+    except SetUpModelError as e:
+        return an_error(e)
+
+
+    # try solving without ngam
+    model_no_ngam = model.copy()
+    model_no_ngam.reactions.get_by_id('ATPM').lower_bound = 0
+    sol_no_ngam = model_no_ngam.optimize()
+    if (sol_no_ngam.f is None) or (sol_no_ngam.f < get_min_biomass()):
+        gr_no_ngam = 0
+    else:
+        gr_no_ngam = sol_no_ngam.f
+
+    # run the FVA and check the non-native pathway
+    (gr, minmax, yield_minmax, max_secretion, max_flux) = minimize_maximize(model.copy(), target_exchange_id,
+                                                                            substrate_exchange_ids)
+
+    # check the max theoretical production, and whether the new pathway is used
+    absolute_max_product, additions_pathway_flux = get_absolute_max(model.copy(), target_exchange_id,
+                                                                    series['Additions'])
+
+    new_series = pd.Series({'target_exchange': target_exchange_id,
+                            'reaction_knockouts': list(reaction_knockouts),
+                            'greedy_knockouts': greedy_knockouts,
+                            'not_in_model': list(not_in_model),
+                            'substrate_exchange': substrate_exchange_ids,
+                            'specific_bounds': specific_bounds,
+                            'gr': gr,
+                            'gr_no_ngam': gr_no_ngam,
+                            'absolute_max_product': absolute_max_product,
+                            'additions_pathway_flux': additions_pathway_flux,
+                            'min': minmax[0],
+                            'max': minmax[1],
+                            'yield_min': yield_minmax[0],
+                            'yield_max': yield_minmax[1],
+                            'secretion': max_secretion,
+                            'flux': max_flux,
+                            'error': np.nan})
+    return series.append(new_series)
+
+
 def set_up_simulation(sims, paper, model_name, gene_ko=False,
                       wildtype_add_pathway=True, print_summary=True):
     case = get_case(sims, paper, model_name, first=True,
@@ -470,6 +544,7 @@ def set_up_simulation(sims, paper, model_name, gene_ko=False,
                     case['Aerobicity'], case['Deletions_b'], gene_ko=gene_ko)
     design_model = out[0]
     return SimulationSetup(case, wildtype_model, design_model)
+
 
 def calculate_envelopes(simulation_setup):
     target = simulation_setup.case.target_exchange
