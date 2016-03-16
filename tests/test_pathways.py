@@ -3,7 +3,8 @@ from me_scripts.hindsight.pathways import (add_heterologous_pathway,
                                            get_no_route_exchanges,
                                            exchange_for_metabolite_name,
                                            add_all_heterologous_pathways)
-from theseus import load_model, setup_model
+from theseus import setup_model
+from theseus.bigg import download_model
 
 import pytest
 from pytest import raises
@@ -11,11 +12,11 @@ from pytest import raises
 
 DEBUG = False
 
-models_to_test = ['iJO1366', 'E. coli core', 'iJR904']
+models_to_test = ['iJO1366', 'e_coli_core', 'iJR904']
 pathways_to_test = get_designs().iteritems()
 if DEBUG:
     pathways_to_test = [('3-Methyl-1-Butanol-kivd-ADH2', get_designs()['3-Methyl-1-Butanol-kivd-ADH2'])]
-    models_to_test = ['E. coli core']
+    models_to_test = ['e_coli_core']
 no_route_exchanges = get_no_route_exchanges()
 
 
@@ -29,7 +30,7 @@ def pathway_tuple(request):
 def model(request):
     # return the loaded model
     model_id = request.param
-    return setup_model(load_model(model_id), 'EX_glc_e', aerobic=False)
+    return setup_model(download_model(model_id), 'EX_glc_e', aerobic=False)
 
 
 def test_add_heterologous_pathway(model, pathway_tuple):
@@ -62,25 +63,25 @@ def test_repeat_additions(model):
         m = add_heterologous_pathway(m, des)
 
 
-# def test_add_heterologous_pathway_core(pathway_tuple):
-#     model = setup_model(load_model('E. coli core'), 'EX_glc_e', aerobic=False)
-#     additions, design = pathway_tuple
-#     # if design[1] is None:
-#     #     continue
-#     m = add_heterologous_pathway(model.copy(), additions)
+def test_add_heterologous_pathway_core(pathway_tuple):
+    model = setup_model(download_model('e_coli_core'), 'EX_glc_e', aerobic=False)
+    additions, design = pathway_tuple
+    if design[1] is None:
+        continue
+    m = add_heterologous_pathway(model.copy(), additions)
 
 
-# def test_add_heterologous_pathway_iJR():
-#     model = load_model('iJR904')
-#     model = setup_model(model, 'EX_glc_e', aerobic=False)
-#     for additions, design in designs.iteritems():
-#         if design[1] is None:
-#             continue
-#         m = add_heterologous_pathway(model.copy(), additions)
+def test_add_heterologous_pathway_iJR():
+    model = download_model('iJR904')
+    model = setup_model(model, 'EX_glc_e', aerobic=False)
+    for additions, design in designs.iteritems():
+        if design[1] is None:
+            continue
+        m = add_heterologous_pathway(model.copy(), additions)
 
 
 def test_add_all_heterologous_pathways():
-    model = load_model('iJO1366')
+    model = download_model('iJO1366')
     model = add_all_heterologous_pathways(model)
     assert 'btal_c' in model.metabolites
     assert 'HACD1' in model.reactions

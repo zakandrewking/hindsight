@@ -46,8 +46,8 @@ except ImportError:
     warn('Seaborn not installed')
 
 
-models_to_compare = ['E. coli core', 'iJR904', 'iAF1260', 'iAF1260b', 'iJO1366', 'ME']
-m_models_to_compare = ['E. coli core', 'iJR904', 'iAF1260', 'iAF1260b', 'iJO1366']
+models_to_compare = ['e_coli_core', 'iJR904', 'iAF1260', 'iAF1260b', 'iJO1366', 'ME']
+m_models_to_compare = ['e_coli_core', 'iJR904', 'iAF1260', 'iAF1260b', 'iJO1366']
 
 
 def get_yield_palette(infeasible_color=(0.7, 0.7, 0.7, 1.0)):
@@ -821,7 +821,7 @@ CategoryMapData = namedtuple('CategoryMapData', ['x_labels',
 def _category_model_limitation(sims):
     # TODO open data file 'cannot_be_coupled.json'
     model_limitation = (
-        ((sims.index.get_level_values('Model') == 'E. coli core') & (sims.loc[:, 'Target'] == 'L-Lactate')) |
+        ((sims.index.get_level_values('Model') == 'e_coli_core') & (sims.loc[:, 'Target'] == 'L-Lactate')) |
         (sims.index.get_level_values('Paper') == 'Atsumi2008_3') |
         (sims.index.get_level_values('Paper') == 'Dellomonaco2011') |
         (sims.index.get_level_values('Paper') == 'Atsumi2008_2') |
@@ -832,10 +832,10 @@ def _category_model_limitation(sims):
         (sims.index.get_level_values('Paper') == 'Jung2011_2') |
         (sims.index.get_level_values('Paper') == 'Zhang2011') |
         (sims.index.get_level_values('Paper') == 'Park2012e') |
-        ((sims.index.get_level_values('Paper') == 'Wang2012a') & (sims.index.get_level_values('Model') == 'E. coli core')) |
+        ((sims.index.get_level_values('Paper') == 'Wang2012a') & (sims.index.get_level_values('Model') == 'e_coli_core')) |
         ((sims.index.get_level_values('Paper') == 'Wang2012a') & (sims.index.get_level_values('Model') == 'iAF1260b')) |
-        ((sims.index.get_level_values('Model') == 'E. coli core') & (sims.index.get_level_values('Paper') == 'Ma2013')) |
-        ((sims.index.get_level_values('Model') == 'E. coli core') & (sims.index.get_level_values('Paper') == 'Jian2010_1')) |
+        ((sims.index.get_level_values('Model') == 'e_coli_core') & (sims.index.get_level_values('Paper') == 'Ma2013')) |
+        ((sims.index.get_level_values('Model') == 'e_coli_core') & (sims.index.get_level_values('Paper') == 'Jian2010_1')) |
         ((sims.index.get_level_values('Paper') == 'Saini2014') & (sims.index.get_level_values('Model') == 'iAF1260b'))
         # no ME here
     ) & (sims.index.get_level_values('Model') != 'ME')
