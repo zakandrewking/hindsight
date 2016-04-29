@@ -7,8 +7,9 @@ import pandas as pd
 import numpy as np
 import re
 
-from me_scripts.hindsight import get_product_dictionary, exchange_for_metabolite_name
-from me_scripts.hindsight.pathways import add_all_heterologous_pathways
+from me_scripts.hindsight import (exchange_for_metabolite_name,
+                                  add_all_heterologous_pathways,
+                                  no_route_exchanges)
 
 from theseus.bigg import download_model
 
@@ -48,7 +49,7 @@ translate_keys = {
     'ID':      'design',
     'annote':  'notes',
     'pmid':    'pmid',
-    'doi':     'doi',
+    # 'doi':     'doi', # parser does not yet recognize doi in BibTeX file
     'year':    'year',
     'author':  'authors',
 }
@@ -101,9 +102,6 @@ def get_metabolite_for_exchange(reaction_id):
     return IJO1366_HETEROLOGOUS.reactions.get_by_id(reaction_id).metabolites.keys()[0]
 
 def parse_byproduct_order(series):
-    # get the product name to metabolite id dict
-    product_dictionary = get_product_dictionary()
-
     # functions
     g_to_mol = lambda g, MW: g / MW
     mol_to_cmol = lambda mol, cnum: mol * cnum
@@ -118,10 +116,10 @@ def parse_byproduct_order(series):
     # find in the model
     def get_mw_c_num(met_name):
         """Get reaction ID, molecular weight, and number of carbons"""
-        if met_name not in product_dictionary:
-            raise Exception('%s not in product_dictionary' % met_name)
-        rxn_id = product_dictionary[met_name]
-        met = get_metabolite_for_exchange(rxn_id)
+        rxn_id, _ = exchange_for_metabolite_name(met_name)
+        if len(rxn_id) > 1:
+            raise Exception('Not supporting multiple products')
+        met = get_metabolite_for_exchange(rxn_id[0])
         MW = met.formula_weight
         cnum = met.elements['C']
         return rxn_id, MW, cnum
@@ -168,12 +166,14 @@ def parse_byproduct_order(series):
     return 'ERROR'
 
 def native_non_native(t, model_native=None, model_non_native=None):
-    product_dictionary = get_product_dictionary()
     try:
-        target = exchange_for_metabolite_name(t.lower(), dictionary=product_dictionary)
+        target, _ = exchange_for_metabolite_name(t.lower())
     except KeyError:
         print 'Could not find %s in mets dictionary' % t
         return np.nan
+    if len(target) > 1:
+        raise Exception('Not supporting multiple targets')
+    target = target[0]
     if target in model_native.reactions:
         return True
     elif target in model_non_native.reactions:

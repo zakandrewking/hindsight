@@ -1,87 +1,96 @@
 from theseus import add_pathway
 from me_scripts.hindsight.variables import NotFoundError
+from minime.solve.algorithms import binary_search, solve_at_growth_rate
 
+no_route_exchanges = [
+    # in the byproduct secretion profile, but not in the model
+    # 'EX_2phetoh_e',
+    # 'EX_iamoh_e',
+    # 'EX_2mbtoh_e',
+    # 'EX_3hv_e',
+]
 
-def get_no_route_exchanges():
-    return ['EX_2petoh_e', 'EX_3hv_e', 'EX_2m1but_e']
+EXCHANGE_NAMES = {
+    'glucose':  'EX_glc__D_e',
+    'xylose':   'EX_xyl__D_e',
+    'D-xylose': 'EX_xyl__D_e',
+    'glycerol': 'EX_glyc_e',
+    'sucrose':  'EX_sucr_e',
+    'LB+glucose, sorbitol, and gluconate': {
+        'substrates': 'EX_glc__D_e',
+        'supplements': ['EX_val__L_e', 'EX_leu__L_e', 'EX_ile__L_e']
+    },
+    'glucose+betaine': 'EX_glc__D_e',
+    'glucose+yeast extract': {
+        'substrates': 'EX_glc__D_e',
+        'supplements': ['EX_val__L_e', 'EX_leu__L_e', 'EX_ile__L_e']
+    },
+    'glucose+LB': {
+        'substrates': 'EX_glc__D_e',
+        'supplements': ['EX_val__L_e', 'EX_leu__L_e', 'EX_ile__L_e']
+    },
+    'LB': {
+        'substrates': 'EX_glc__D_e',
+        'supplements': ['EX_val__L_e', 'EX_leu__L_e', 'EX_ile__L_e']
+    },
+    'glucose+xylose': ['EX_glc__D_e', 'EX_xyl__D_e'],
+    'pyruvate+yeast extract': {
+        'substrates': 'EX_pyr_e',
+        'supplements': ['EX_val__L_e', 'EX_leu__L_e', 'EX_ile__L_e']
+    },
+    'glucose+acetate': ['EX_glc__D_e', 'EX_ac_e'],
+    'mannitol': 'EX_mnl_e',
+    'D-Glucose+L-Valine+L-Isoleucine+L-Leucine': {
+        'substrates': 'EX_glc__D_e',
+        'supplements': ['EX_val__L_e', 'EX_leu__L_e', 'EX_ile__L_e']
+    },
+    '2-Ketoglutarate': 'EX_akg_e',
+    '2-Phenylethanol': 'EX_2phetoh_e',
+    '3-Methyl-1-butanol': 'EX_iamoh_e',
+    '2-Methyl-1-butanol': 'EX_2mbtoh_e',
+    '3HV': 'EX_3hv_e',
+    '4HB': 'EX_4hdxbld_e',
+    'Formate': 'EX_for_e',
+    '1-Propanol': 'EX_1poh_e',
+    'GBL': 'EX_gbl_e',
+    'L-Alanine': 'EX_ala__L_e',
+    '14BDO': 'EX_14btd_e',
+    'Formate': 'EX_for_e',
+    '1-Butanol': 'EX_1boh_e',
+    '1-Hexanol': 'EX_1hex_e',
+    'Fumarate': 'EX_fum_e',
+    'L-Malate': 'EX_mal__L_e',
+    'Isobutanol': 'EX_iboh_e',
+    'Pyruvate': 'EX_pyr_e',
+    '3HB': 'EX_3hb_e',
+    'Acetate': 'EX_ac_e',
+    'L-Lactate': 'EX_lac__L_e',
+    'Ethanol': 'EX_etoh_e',
+    'Lactate': 'EX_lac__D_e',
+    'D-Lactate': 'EX_lac__D_e',
+    'Succinate': 'EX_succ_e',
+    'Butyrate': 'EX_but_e',
+    'H2': 'EX_h2_e',
+    'PLA': 'EX_lac__D_e',
+    '3HBcoLA': 'EX_3hb_co_la_e',
+    '3HBco3HV': 'EX_3hb_e',
+    'PHB': 'EX_3hb_e',
+    '(R,R)-2,3-BDO': 'EX_btd__RR_e',
+    'meso-2,3-BDO': 'EX_btd__meso_e',
+    'methyl ketones': 'EX_2ptone_e',
+}
+def to_list(v):
+    return v if isinstance(v, list) else [v]
+def exchange_for_metabolite_name(name):
+    """Returns (list of substrate exchanges, list of supplement exhanges)."""
+    for k, v in EXCHANGE_NAMES.iteritems():
+        if k.lower() == name.lower().strip().replace('homo', ''):
+            if isinstance(v, dict):
+                return to_list(v['substrates']), to_list(v['supplements'])
+            else:
+                return to_list(v), None
+    raise NotFoundError('Could not find %s' % name)
 
-
-def get_substrate_dictionary():
-    return {
-        'glucose': 'EX_glc_e',
-        'xylose': 'EX_xyl__D_e',
-        'D-xylose': 'EX_xyl__D_e',
-        'glycerol': 'EX_glyc_e',
-        'sucrose': 'EX_sucr_e',
-        'LB+glucose, sorbitol, and gluconate': {
-            'substrates': 'EX_glc_e',
-            'supplementations': ['EX_val__L_e', 'EX_leu__L_e', 'EX_ile__L_e']
-        },
-        'glucose+betaine': 'EX_glc_e',
-        'glucose+yeast extract': {
-            'substrates': 'EX_glc_e',
-            'supplementations': ['EX_val__L_e', 'EX_leu__L_e', 'EX_ile__L_e']
-        },
-        'glucose+LB': {
-            'substrates': 'EX_glc_e',
-            'supplementations': ['EX_val__L_e', 'EX_leu__L_e', 'EX_ile__L_e']
-        },
-        'LB': {
-            'substrates': 'EX_glc_e',
-            'supplementations': ['EX_val__L_e', 'EX_leu__L_e', 'EX_ile__L_e']
-        },
-        'glucose+xylose': ['EX_glc_e', 'EX_xyl__D_e'],
-        'pyruvate+yeast extract': {
-            'substrates': 'EX_pyr_e',
-            'supplementations': ['EX_val__L_e', 'EX_leu__L_e', 'EX_ile__L_e']
-        },
-        'glucose+acetate': ['EX_glc_e', 'EX_ac_e'],
-        'mannitol': 'EX_mnl_e',
-        'D-Glucose+L-Valine+L-Isoleucine+L-Leucine': {
-            'substrates': 'EX_glc_e',
-            'supplementations': ['EX_val__L_e', 'EX_leu__L_e', 'EX_ile__L_e']
-        }
-    }
-
-
-def get_product_dictionary():
-    return {
-        '2-Phenylethanol': 'EX_2petoh_e',
-        '2-Ketoglutarate': 'EX_akg_e',
-        '3-Methyl-1-butanol': 'EX_3m1but_e',
-        '2-Methyl-1-butanol': 'EX_2m1but_e',
-        '3HV': 'EX_3hv_e',
-        '4HB': 'EX_4hdxbld_e',
-        'Formate': 'EX_for_e',
-        '1-Propanol': 'EX_1poh_e',
-        'GBL': 'EX_gbl_e',
-        'L-Alanine': 'EX_ala__L_e',
-        '14BDO': 'EX_14btd_e',
-        'Formate': 'EX_for_e',
-        '1-Butanol': 'EX_1boh_e',
-        '1-Hexanol': 'EX_1hex_e',
-        'Fumarate': 'EX_fum_e',
-        'L-Malate': 'EX_mal__L_e',
-        'Isobutanol': 'EX_iboh_e',
-        'Pyruvate': 'EX_pyr_e',
-        '3HB': 'EX_3hb_e',
-        'Acetate': 'EX_ac_e',
-        'L-Lactate': 'EX_lac__L_e',
-        'Ethanol': 'EX_etoh_e',
-        'Lactate': 'EX_lac__D_e',
-        'D-Lactate': 'EX_lac__D_e',
-        'Succinate': 'EX_succ_e',
-        'Butyrate': 'EX_but_e',
-        'H2': 'EX_h2_e',
-        'PLA': 'EX_lac__D_e',
-        '3HBcoLA': 'EX_3hb_co_la_e',
-        '3HBco3HV': 'EX_3hb_e',
-        'PHB': 'EX_3hb_e',
-        '(R,R)-2,3-BDO': 'EX_btd__RR_e',
-        'meso-2,3-BDO': 'EX_btd__meso_e',
-        'Methyl ketones': 'EX_2ptone_e',
-        'Glycerol': 'EX_glyc_e'
-    }
 
 def get_designs():
     return {
@@ -95,12 +104,27 @@ def get_designs():
         # 1-propanol
         # -----------
 
-        '1propanol-ADH2, kivd, ilvA, leuABCD': # 1-propanol SA203-pSA55-pSA62
-        [{ '1poh_c': {'formula': 'C3H8O', 'name': '1-propanol'} },
-         { '2OBUTDC': {'2obut_c': -1, 'h_c': -1, 'ppal_c': 1, 'co2_c': 1},
-           '1PDH': {'ppal_c': -1, 'nadh_c': -1, 'h_c': -1, '1poh_c': 1, 'nad_c': 1},
-           'EX_1poh_e': {'1poh_c': -1} },
-         None, {'EX_1poh_e': (0, 1000)}],
+        # 1-propanol SA203-pSA55-pSA62
+        '1_propanol_adh2_kivd_ilva_leu': [
+            {
+                '1poh_c': {'formula': 'C3H8O', 'name': '1-propanol'},
+                '2phetoh_c': {'formula': 'C8H10O', 'name': '2-phenylethanol'},
+                'iamoh_c': {'formula': 'C5H12O', 'name': '3-Methyl-1-butanol'},
+                '2mbtoh_c': {'formula': 'C5H12O', 'name': '2-Methyl-1-butanol'},
+            },
+            {
+                '2OBUTDC': {'2obut_c': -1, 'h_c': -1, 'ppal_c': 1, 'co2_c': 1},
+                '1PDH': {'ppal_c': -1, 'nadh_c': -1, 'h_c': -1, '1poh_c': 1, 'nad_c': 1},
+                'EX_1poh_e': {'1poh_c': -1},
+                'EX_2phetoh_e': {'2phetoh_c': -1},
+                'EX_iamoh_e': {'iamoh_c': -1},
+                'EX_2mbtoh_e': {'2mbtoh_c': -1},
+            },
+            None,
+            {
+                'EX_1poh_e': (0, 1000),
+            },
+        ],
 
         'ilvA, kivD, ADH2, cimA, leuBCD': # 2 pathways Shen2013
         [{'1poh_c': {'formula': 'C3H8O', 'name': '1-propanol'},
@@ -222,22 +246,50 @@ def get_designs():
         # isobutanol
         # -----------
 
-        'AlsS, AlsS, IlvCD, Kdc, AdhA': # Isobutanol
-        [{'ibald_c': {'formula': 'C4H8O', 'name': 'isobutyraldehyde'},
-          'iboh_c': {'formula': 'C4H10O', 'name': 'isobutanol'}},
-         {'3MOBDC': {'3mob_c': -1, 'h_c': -1, 'ibald_c': 1, 'co2_c': 1},
-          'IBDH': {'ibald_c': -1, 'nadh_c': -1, 'h_c': -1, 'iboh_c': 1, 'nad_c': 1},
-          'EX_iboh_e': {'iboh_c': -1}},
-         None, {'EX_iboh_e': (0,1000)}],
+        'isobutanol_als_ilv_kdc_adh': [
+            {
+                'ibald_c': {'formula': 'C4H8O', 'name': 'isobutyraldehyde'},
+                'iboh_c': {'formula': 'C4H10O', 'name': 'isobutanol'},
+                '2phetoh_c': {'formula': 'C8H10O', 'name': '2-phenylethanol'},
+                'iamoh_c': {'formula': 'C5H12O', 'name': '3-Methyl-1-butanol'},
+                '2mbtoh_c': {'formula': 'C5H12O', 'name': '2-Methyl-1-butanol'},
+            },
+            {
+                '3MOBDC': {'3mob_c': -1, 'h_c': -1, 'ibald_c': 1, 'co2_c': 1},
+                'IBDH': {'ibald_c': -1, 'nadh_c': -1, 'h_c': -1, 'iboh_c': 1, 'nad_c': 1},
+                'EX_iboh_e': {'iboh_c': -1},
+                'EX_2phetoh_e': {'2phetoh_c': -1},
+                'EX_iamoh_e': {'iamoh_c': -1},
+                'EX_2mbtoh_e': {'2mbtoh_c': -1},
+            },
+            None,
+            {
+                'EX_iboh_e': (0,1000),
+            }
+        ],
 
-         'AlsS, AlsS, IlvCD-nadh, Kdc, Adh': # Isobutanol ilvC-nadh \cite{Bastian2011}
-        [{'ibald_c': {'formula': 'C4H8O', 'name': 'isobutyraldehyde'},
-          'iboh_c': {'formula': 'C4H10O', 'name': 'isobutanol'}},
-         {'KARA1x': {'h_c': 1.0, 'nad_c': -1.0, 'nadh_c': 1.0, 'alac__S_c': 1.0, '23dhmb_c': -1.0},
-          '3MOBDC': {'3mob_c': -1, 'h_c': -1, 'ibald_c': 1, 'co2_c': 1},
-          'IBDH': {'ibald_c': -1, 'nadh_c': -1, 'h_c': -1, 'iboh_c': 1, 'nad_c': 1},
-          'EX_iboh_e': {'iboh_c': -1}},
-         None, {'EX_iboh_e': (0,1000)}],
+        'isobutanol_als_ilv_nadh_kdc_adh': [
+            {
+                'ibald_c': {'formula': 'C4H8O', 'name': 'isobutyraldehyde'},
+                'iboh_c': {'formula': 'C4H10O', 'name': 'isobutanol'},
+                '2phetoh_c': {'formula': 'C8H10O', 'name': '2-phenylethanol'},
+                'iamoh_c': {'formula': 'C5H12O', 'name': '3-Methyl-1-butanol'},
+                '2mbtoh_c': {'formula': 'C5H12O', 'name': '2-Methyl-1-butanol'},
+            },
+            {
+                'KARA1x': {'h_c': 1.0, 'nad_c': -1.0, 'nadh_c': 1.0, 'alac__S_c': 1.0, '23dhmb_c': -1.0},
+                '3MOBDC': {'3mob_c': -1, 'h_c': -1, 'ibald_c': 1, 'co2_c': 1},
+                'IBDH': {'ibald_c': -1, 'nadh_c': -1, 'h_c': -1, 'iboh_c': 1, 'nad_c': 1},
+                'EX_iboh_e': {'iboh_c': -1},
+                'EX_2phetoh_e': {'2phetoh_c': -1},
+                'EX_iamoh_e': {'iamoh_c': -1},
+                'EX_2mbtoh_e': {'2mbtoh_c': -1},
+            },
+            None,
+            {
+                'EX_iboh_e': (0,1000),
+            }
+        ],
 
         # 'ilvIHCD, PDC6, ADH2, kivd': # Isobutanol
         # [{'ibald_c': {'formula': 'C4H8O', 'name': 'isobutyraldehyde'},
@@ -259,31 +311,49 @@ def get_designs():
         # 3-Methyl-1-butanol
         # ----------
 
-        '3-Methyl-1-butanol-kivd-ADH2':
-        [{'3mal_c': {'formula': 'C5H10O', 'name': '3-Methylbutanal'},
-          '3m1but_c': {'formula': 'C5H12O', 'name': '3-Methyl-1-butanol'}},
-         {'4MOBDC': {'4mop_c': -1, 'h_c': -1, '3mal_c': 1, 'co2_c': 1},
-          '3M1BDH': {'3mal_c': -1, 'nadh_c': -1, 'h_c': -1, '3m1but_c': 1, 'nad_c': 1},
-          'EX_3m1but_e': {'3m1but_c': -1}},
-         None, {'EX_3m1but_e': (0, 1000)}],
+        '3_methyl_1_butanol_kivd_adh2': [
+            {
+                '3mbald_c': {'formula': 'C5H10O', 'name': '3-Methylbutanal'},
+                'iamoh_c': {'formula': 'C5H12O', 'name': '3-Methyl-1-butanol'},
+            },
+            {
+                '4MOBDC': {'4mop_c': -1, 'h_c': -1, '3mbald_c': 1, 'co2_c': 1},
+                '3M1BDH': {'3mbald_c': -1, 'nadh_c': -1, 'h_c': -1, 'iamoh_c': 1, 'nad_c': 1},
+                'EX_iamoh_e': {'iamoh_c': -1}
+            },
+            None,
+            {
+                'EX_iamoh_e': (0, 1000)
+            }
+        ],
 
         # -----------
         # 1-butanol, 1-hexanol
         # -----------
 
-        '1butanol-ADH2, kivd, ilvA, leuABCD': # 1-butanol SA203-pSA55-pSA62
-        [{ '2kv_c': {'formula': 'C5H7O3', 'name': '2-ketovalerate'},
-           '1boh_c': {'formula': 'C4H10O', 'name': '1-butanol'} },
-         { # http://ecocyc.com/ECOLI/NEW-IMAGE?type=PATHWAY&object=LEUSYN-PWY
-           'ILV_PATHWAY': {'2obut_c': -1, 'h2o_c': -1,  'accoa_c': -1, 'nad_c': -1,
-                           'coa_c': 1, 'h_c': 1, 'nadh_c': 1, 'co2_c': 1, '2kv_c': 1},
-           '2KVDC': {'2kv_c': -1, 'h_c': -1, 'btal_c': 1, 'co2_c': 1},
-           '1BDH': {'btal_c': -1, 'nadh_c': -1, 'h_c': -1, '1boh_c': 1, 'nad_c': 1},
-           'EX_1boh_e': {'1boh_c': -1} },
-         None, {'EX_1boh_e': (0, 1000)}],
+        '1_butanol_adh2_kivd_ilva_leu': [
+            {
+                '2kv_c': {'formula': 'C5H7O3', 'name': '2-ketovalerate'},
+                '1boh_c': {'formula': 'C4H10O', 'name': '1-butanol'},
+                '2phetoh_c': {'formula': 'C8H10O', 'name': '2-phenylethanol'},
+            },
+            {
+                # http://ecocyc.com/ECOLI/NEW-IMAGE?type=PATHWAY&object=LEUSYN-PWY
+                'ILV_PATHWAY': {'2obut_c': -1, 'h2o_c': -1,  'accoa_c': -1, 'nad_c': -1,
+                                'coa_c': 1, 'h_c': 1, 'nadh_c': 1, 'co2_c': 1, '2kv_c': 1,},
+                '2KVDC': {'2kv_c': -1, 'h_c': -1, 'btal_c': 1, 'co2_c': 1},
+                '1BDH': {'btal_c': -1, 'nadh_c': -1, 'h_c': -1, '1boh_c': 1, 'nad_c': 1},
+                'EX_1boh_e': {'1boh_c': -1},
+                'EX_2phetoh_e': {'2phetoh_c': -1},
+            },
+            None,
+            {
+                'EX_1boh_e': (0, 1000),
+            }
+        ],
 
         'bcd etfAB': # 1-butanol
-        [{'btcoa_c': {'formula': 'C25H38N7O17P3S', 'name': 'butyryl-CoA'}, # TODO already in iJO1366
+        [{'btcoa_c': {'formula': 'C25H38N7O17P3S', 'name': 'butyryl-CoA'}, # NOTE already in iJO1366
           '1boh_c': {'formula': 'C4H10O', 'name': '1-butanol'}},
          {'B2COAR': {'b2coa_c': -1, 'nadh_c': -1, 'h_c': -1, 'nad_c': 1, 'btcoa_c': 1},
           'BTALDH': {'nadh_c': -1, 'h_c': -1, 'btcoa_c': -1, 'btal_c': 1,
@@ -306,7 +376,7 @@ def get_designs():
          None, {'EX_1hex_e': (0, 1000)}],
 
           'atoBEC adhE2CA crtCA bhdCA terTD fdhCB': # 1-butanol
-        [{'btcoa_c': {'formula': 'C25H38N7O17P3S', 'name': 'butyryl-CoA'}, # TODO already in iJO1366
+        [{'btcoa_c': {'formula': 'C25H38N7O17P3S', 'name': 'butyryl-CoA'}, # NOTE already in iJO1366
           '1boh_c': {'formula': 'C4H10O', 'name': '1-butanol'}},
          {'B2COAR': {'b2coa_c': -1, 'nadh_c': -1, 'h_c': -1, 'nad_c': 1, 'btcoa_c': 1},
           'BTALDH': {'nadh_c': -1, 'h_c': -1, 'btcoa_c': -1, 'btal_c': 1, 'nad_c': 1, 'coa_c': 1},
@@ -314,15 +384,37 @@ def get_designs():
           'EX_1boh_e': {'1boh_c': -1}},
          None, {'EX_1boh_e': (0, 1000)}],
 
-        # -----------
-        # butyrate
-        # -----------
+        # --------------------
+        # butyrate, propanoate
+        # --------------------
 
-         'crt ter': # Butyrate
-         [{'btcoa_c': {'formula': 'C25H38N7O17P3S', 'name': 'butyryl-CoA'}}, # TODO already in iJO1366
-         {'B2COAR': {'b2coa_c': -1, 'nadh_c': -1, 'h_c': -1, 'nad_c': 1, 'btcoa_c': 1},
-          'BUTTH': {'h2o_c': -1, 'btcoa_c': -1, 'but_c': 1, 'h_c': 1, 'coa_c': 1}},
-          None, {'EX_but_e': (0, 1000)}],
+        # Lim2013-sy, Saini2014-br, Volker2014-pd
+         'butyrate_crt_ter': [
+             {
+                 'btcoa_c': {'formula': 'C25H38N7O17P3S', 'name': 'butyryl-CoA'}, # NOTE already in iJO1366 and iAF1260(b)
+             },
+             {
+                 'B2COAR': {'b2coa_c': -1, 'nadh_c': -1, 'h_c': -1, 'nad_c': 1, 'btcoa_c': 1},
+                 'BUTTH': {'h2o_c': -1, 'btcoa_c': -1, 'but_c': 1, 'h_c': 1, 'coa_c': 1},
+             },
+             None,
+             {
+                 'EX_but_e': (0, 1000),
+             }
+         ],
+
+        # Volker2014-pd 12ppd__R_c -R02376-> propionaldehyde -R09097/MMSAD2-> propionyl-coa -??-> 3-keto-pentanoate -??-> propionate
+        # 'propanoate': [
+        #     {},
+        #     {
+        #         'PPDDH': {'12ppd__R_c': -1, 'ppal_c': 1},
+        #         'MMSAD2': {'coa_c': -1, 'nad_c': -1, 'ppal_c': -1,  'h_c': 1, 'nadh_c': 1, 'ppcoa_c': 1},
+        #     },
+        #     None,
+        #     {
+        #         'EX_ppa_e': (0, 1000),
+        #     }
+        # ],
 
         # -----------
         # H2, butanone
@@ -338,6 +430,14 @@ def get_designs():
           'MKS': {'keto_acid_c': -1, '2ptone_c': 1, 'co2_c': 1},
           'EX_2ptone_e': {'2ptone_c': -1}},
          None, {'EX_2ptone_e': (0, 1000)}],
+
+        # ----------------
+        # Xylitol
+        # ----------------
+
+        'xylitol': [
+
+        ]
     }
 
 def get_core_designs():
@@ -390,7 +490,7 @@ def get_core_designs():
 
         # Isobutanol
 
-        'AlsS, AlsS, IlvCD, Kdc, AdhA':
+        'isobutanol_als_ilv_kdc_adh':
         [{'23dhmb_c': {'formula': 'C5H9O4', 'name': '(R)-2,3-Dihydroxy-3-methylbutanoate'},
           '3mob_c': {'formula': 'C5H7O3', 'name': '3-Methyl-2-oxobutanoate'},
           'alac__S_c': {'formula': 'C5H7O4', 'name': '(S)-2-Acetolactate'}},
@@ -399,7 +499,7 @@ def get_core_designs():
           'KARA1': {'23dhmb_c': -1.0, 'alac__S_c': 1.0, 'h_c': 1.0, 'nadp_c': -1.0, 'nadph_c': 1.0}},
          None, None],
 
-        'AlsS, AlsS, IlvCD-nadh, Kdc, Adh':
+        'isobutanol_als_ilv_nadh_kdc_adh':
         [{'23dhmb_c': {'formula': 'C5H9O4', 'name': '(R)-2,3-Dihydroxy-3-methylbutanoate'},
           '3mob_c': {'formula': 'C5H7O3', 'name': '3-Methyl-2-oxobutanoate'},
           'alac__S_c': {'formula': 'C5H7O4', 'name': '(S)-2-Acetolactate'}},
@@ -410,25 +510,30 @@ def get_core_designs():
 
         # 3-Methyl-1-butanol
 
-        '3-Methyl-1-butanol-kivd-ADH2':
-        [{'23dhmb_c': {'formula': 'C5H9O4', 'name': '(R)-2,3-Dihydroxy-3-methylbutanoate'},
-          '3mob_c': {'formula': 'C5H7O3', 'name': '3-Methyl-2-oxobutanoate'},
-          'alac__S_c': {'formula': 'C5H7O4', 'name': '(S)-2-Acetolactate'},
-          '3c3hmp_c': {'formula': 'C7H10O5', 'name': '3-Carboxy-3-hydroxy-4-methylpentanoate'},
-          '2ippm_c': {'formula': 'C7H8O4', 'name': '2-Isopropylmaleate'},
-          '3c2hmp_c': {'formula': 'C7H10O5', 'name': '3-Carboxy-2-hydroxy-4-methylpentanoate'},
-          '3c4mop_c': {'formula': 'C7H8O5', 'name': '3-Carboxy-4-methyl-2-oxopentanoate'},
-          '4mop_c': {'formula': 'C6H9O3', 'name': '4-Methyl-2-oxopentanoate'}},
-         {'ACLS': {'alac__S_c': 1.0, 'co2_c': 1.0, 'h_c': -1.0, 'pyr_c': -2.0},
-          'DHAD1': {'23dhmb_c': -1.0, '3mob_c': 1.0, 'h2o_c': 1.0},
-          'KARA1': {'23dhmb_c': -1.0, 'alac__S_c': 1.0, 'h_c': 1.0, 'nadp_c': -1.0, 'nadph_c': 1.0},
-          'IPPS': {'3mob_c': -1, 'accoa_c': -1, 'h2o_c': -1, '3c3hmp_c': 1, 'coa_c': 1, 'h_c': 1},
-          'IPPMIb': {'2ippm_c': -1, 'h2o_c': -1, '3c3hmp_c': 1},
-          'IPPMIa': {'3c2hmp_c': -1, '2ippm_c': 1, 'h2o_c': 1},
-          'IPMD': {'3c2hmp_c': -1, 'nad_c': -1, '3c4mop_c': 1, 'h_c': 1, 'nadh_c': 1},
-          'OMCDC': {'3c4mop_c': -1, 'h_c': -1, '4mop_c': 1, 'co2_c': 1}},
-         None, None],
-
+        '3_methyl_1_butanol_kivd_adh2': [
+            {
+                '23dhmb_c': {'formula': 'C5H9O4', 'name': '(R)-2,3-Dihydroxy-3-methylbutanoate'},
+                '3mob_c': {'formula': 'C5H7O3', 'name': '3-Methyl-2-oxobutanoate'},
+                'alac__S_c': {'formula': 'C5H7O4', 'name': '(S)-2-Acetolactate'},
+                '3c3hmp_c': {'formula': 'C7H10O5', 'name': '3-Carboxy-3-hydroxy-4-methylpentanoate'},
+                '2ippm_c': {'formula': 'C7H8O4', 'name': '2-Isopropylmaleate'},
+                '3c2hmp_c': {'formula': 'C7H10O5', 'name': '3-Carboxy-2-hydroxy-4-methylpentanoate'},
+                '3c4mop_c': {'formula': 'C7H8O5', 'name': '3-Carboxy-4-methyl-2-oxopentanoate'},
+                '4mop_c': {'formula': 'C6H9O3', 'name': '4-Methyl-2-oxopentanoate'},
+            },
+            {
+                'ACLS': {'alac__S_c': 1.0, 'co2_c': 1.0, 'h_c': -1.0, 'pyr_c': -2.0},
+                'DHAD1': {'23dhmb_c': -1.0, '3mob_c': 1.0, 'h2o_c': 1.0},
+                'KARA1': {'23dhmb_c': -1.0, 'alac__S_c': 1.0, 'h_c': 1.0, 'nadp_c': -1.0, 'nadph_c': 1.0},
+                'IPPS': {'3mob_c': -1, 'accoa_c': -1, 'h2o_c': -1, '3c3hmp_c': 1, 'coa_c': 1, 'h_c': 1},
+                'IPPMIb': {'2ippm_c': -1, 'h2o_c': -1, '3c3hmp_c': 1},
+                'IPPMIa': {'3c2hmp_c': -1, '2ippm_c': 1, 'h2o_c': 1},
+                'IPMD': {'3c2hmp_c': -1, 'nad_c': -1, '3c4mop_c': 1, 'h_c': 1, 'nadh_c': 1},
+                'OMCDC': {'3c4mop_c': -1, 'h_c': -1, '4mop_c': 1, 'co2_c': 1},
+            },
+            None,
+            None
+        ],
 
         'sucD, 4hbd, sucA, cat2, 025B':
         [{'sucsal_c': {'formula': 'C4H5O3', 'name': 'Succinic semialdehyde'},
@@ -468,7 +573,7 @@ def get_core_designs():
           'THRS': {'phom_c': -1.0, 'thr__L_c': 1.0, 'pi_c': 1.0, 'h2o_c': -1.0}},
          None, None],
 
-        'crt ter':
+        'butyrate_crt_ter':
         [{'3hbcoa_c': {'formula': 'C25H38N7O18P3S', 'name': '(S)-3-Hydroxybutanoyl-CoA'},
           'aacoa_c': {'formula': 'C25H36N7O18P3S', 'name': 'Acetoacetyl-CoA'},
           'b2coa_c': {'formula': 'C25H36N7O17P3S', 'name': 'Crotonoyl-CoA'},
@@ -499,7 +604,7 @@ def get_core_designs():
         #   'KARA1': {'23dhmb_c': -1.0, 'alac__S_c': 1.0, 'h_c': 1.0, 'nadp_c': -1.0, 'nadph_c': 1.0}},
         #  None, None],
 
-        '1propanol-ADH2, kivd, ilvA, leuABCD':
+        '1_propanol_adh2_kivd_ilva_leu':
         [{'phom_c': {'formula': 'C4H8NO6P', 'name': 'O-Phospho-L-homoserine'},
           'aspsa_c': {'formula': 'C4H7NO3', 'name': 'L-Aspartate 4-semialdehyde'},
           'asp__L_c': {'formula': 'C4H6NO4', 'name': 'L-Aspartate'},
@@ -518,7 +623,7 @@ def get_core_designs():
          'THRS': {'phom_c': -1.0, 'thr__L_c': 1.0, 'pi_c': 1.0, 'h2o_c': -1.0}},
          None, None],
 
-        '1butanol-ADH2, kivd, ilvA, leuABCD':
+        '1_butanol_adh2_kivd_ilva_leu':
         [{'phom_c': {'formula': 'C4H8NO6P', 'name': 'O-Phospho-L-homoserine'},
           'aspsa_c': {'formula': 'C4H7NO3', 'name': 'L-Aspartate 4-semialdehyde'},
           'asp__L_c': {'formula': 'C4H6NO4', 'name': 'L-Aspartate'},
@@ -646,28 +751,34 @@ def get_iJR904_designs():
                     'nad_c': 1.0, 'nadh_c': -1.0}},
          None, None],
 
-        'crt ter':
-        [{'3hbcoa_c': {'formula': 'C25H38N7O18P3S', 'name': '(S)-3-Hydroxybutanoyl-CoA'},
-          'b2coa_c': {'formula': 'C25H36N7O17P3S', 'name': 'Crotonoyl-CoA'},
-          'btal_c': {'formula': 'C4H8O', 'name': 'Butanal'},
-          'but_c': {'formula': 'C4H7O2', 'name': 'Butyrate (n-C4:0)'}},
-         {'ECOAH1': {'3hbcoa_c': -1.0, 'b2coa_c': 1.0, 'h2o_c': 1.0},
-          'HACD1': {'3hbcoa_c': 1.0, 'aacoa_c': -1.0, 'h_c': -1.0,
-                    'nad_c': 1.0, 'nadh_c': -1.0}},
-         None, None],
+        'butyrate_crt_ter': [
+            {
+                '3hbcoa_c': {'formula': 'C25H38N7O18P3S', 'name': '(S)-3-Hydroxybutanoyl-CoA'},
+                'b2coa_c': {'formula': 'C25H36N7O17P3S', 'name': 'Crotonoyl-CoA'},
+                'btal_c': {'formula': 'C4H8O', 'name': 'Butanal'},
+                'but_c': {'formula': 'C4H7O2', 'name': 'Butyrate (n-C4:0)'}
+            },
+            {
+                'ECOAH1': {'3hbcoa_c': -1.0, 'b2coa_c': 1.0, 'h2o_c': 1.0},
+                'HACD1': {'3hbcoa_c': 1.0, 'aacoa_c': -1.0, 'h_c': -1.0,
+                          'nad_c': 1.0, 'nadh_c': -1.0}
+            },
+            None,
+            None
+        ],
 
         'alaD':
         [{'ala__L_c': {'formula': 'C3H7NO2', 'name': 'L-Alanine'}},
          {},
          None, None],
 
-        '1propanol-ADH2, kivd, ilvA, leuABCD':
+        '1_propanol_adh2_kivd_ilva_leu':
         [{'btal_c': {'formula': 'C4H8O', 'name': 'Butanal'},
           'ppal_c': {'formula': 'C3H6O', 'name': 'Propanal'}},
          {},
          None, None],
 
-        '1butanol-ADH2, kivd, ilvA, leuABCD':
+        '1_butanol_adh2_kivd_ilva_leu':
         [{'btal_c': {'formula': 'C4H8O', 'name': 'Butanal'},
           'ppal_c': {'formula': 'C3H6O', 'name': 'Propanal'}},
          {},
@@ -749,9 +860,3 @@ def add_all_heterologous_pathways(model, copy=False):
     for additions in get_designs().iterkeys():
         model = add_heterologous_pathway(model, additions, ignore_repeats=True)
     return model
-
-def exchange_for_metabolite_name(name, dictionary):
-    for k,v in dictionary.iteritems():
-        if k.lower()==name.lower().strip().replace('homo', ''):
-            return v
-    raise NotFoundError('Could not find %s' % name)

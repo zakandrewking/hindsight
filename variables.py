@@ -4,8 +4,8 @@ class NotFoundError(Exception):
 class SetUpModelError(Exception):
     pass
 
-def get_min_biomass():
-    return 0.005
-
-def get_max_our():
-    return 20
+min_biomass = 0.005
+max_our = 20
+default_sur = 10
+carbon_uptake_rate = 60
+supplement_uptake = 10 # each
