@@ -28,17 +28,21 @@ m_models_to_compare = ['e_coli_core', 'iJR904', 'iAF1260', 'iAF1260b',
                        'iJO1366', 'iML1515']
 private_models = ['iML1515', 'ME']
 
-def download_or_load_model(name):
-    if name in private_models:
+def download_or_load_model_me_placeholder(name):
+    if name == 'ME':
+        return 'placeholder'
+    elif name in private_models:
         return load_model(name)
     else:
         return download_model(name, host='http://zak.ucsd.edu:8888/api/v2/')
 
+IJO1366 = download_or_load_model_me_placeholder('iJO1366')
+
 def load_models_to_compare(m_only=False):
     if m_only:
-        return {n: download_or_load_model(n) for n in m_models_to_compare}
+        return {n: download_or_load_model_me_placeholder(n) for n in m_models_to_compare}
     else:
-        return {n: download_or_load_model(n) for n in models_to_compare}
+        return {n: download_or_load_model_me_placeholder(n) for n in models_to_compare}
 
 def find_me_reactions(me_model, m_reaction_id):
     """Returns a list of ME reaction IDs."""
@@ -46,12 +50,11 @@ def find_me_reactions(me_model, m_reaction_id):
 
 def me_optimize_growth(me):
     return binary_search(me, min_mu=0, max_mu=1.1, mu_accuracy=1e-5,
-                         compiled_expressions=me.expressions, debug=False)
+                         compiled_expressions=me.expressions)
 
 def me_optimize_target(me, growth_rate):
     return solve_at_growth_rate(me, growth_rate,
-                                compiled_expressions=me.expressions,
-                                debug=False)
+                                compiled_expressions=me.expressions)
 
 # --------------------------------------------------
 # Simulation
@@ -161,7 +164,7 @@ def get_absolute_max(sim_setup, copy=False):
     # objective is target production
     model.change_objective(sim_setup.design.target_exchange)
 
-    sol = me_optimize_target(me, min_biomass) if model.id == 'ME' else model.optimize()
+    sol = me_optimize_target(model, min_biomass) if model.id == 'ME' else model.optimize()
 
     if sol.f is None:
         return np.nan, np.nan
@@ -192,10 +195,12 @@ def minimize_maximize(sim_setup, biomass_fraction=0.9999,
     substrate_exchanges = sim_setup.environment.substrate_exchanges
     target_exchange = sim_setup.design.target_exchange
 
-    sol = me_optimize_growth(model) if model.id == 'ME' else model.optimize()
+    # sol = me_optimize_growth(model) if model.id == 'ME' else model.optimize()
 
-    growth_rate = 0.0 if sol.f is None else sol.f
-    if growth_rate < min_biomass:
+    # growth_rate = 0.0 if sol.f is None else sol.f
+    growth_rate = np.nan
+    # if growth_rate < min_biomass:
+    if True:
         yield_minmax = (np.nan, np.nan)
         minmax = (np.nan, np.nan)
         max_secretion = np.nan
@@ -205,7 +210,7 @@ def minimize_maximize(sim_setup, biomass_fraction=0.9999,
         if model.id == 'ME':
             max_target = sol.x_dict[target_exchange]
             minmax = (max_target, max_target)
-            max_secretion = get_secretion(model, max_sol.x_dict)
+            max_secretion = get_secretion(model, sol.x_dict)
             max_flux = model.get_metabolic_flux()
         else:
             # set the minimum biomass production
@@ -237,7 +242,8 @@ def check_setup(sim_setup):
     """Return genes that are in the design but not the model."""
     design = sim_setup.design
     model = sim_setup.model
-    return [g for g in design.gene_knockouts if g not in model.genes]
+    return [g for g in design.gene_knockouts if g not in model.genes and
+            (model.id != 'ME' or 'RNA_%s' % g not in model.metabolites)]
 
 def get_reaction_knockouts(model, design, use_greedy_knockouts):
     """Determine the reactions that will be removed by gene knockouts, also
@@ -246,11 +252,16 @@ def get_reaction_knockouts(model, design, use_greedy_knockouts):
     Returns (reaction knockouts, greedy knockouts)
 
     """
+    is_me_model = model.id == 'ME'
     reaction_knockouts = set()
     gene_reaction_knockouts = set()
     for g in design.gene_knockouts:
-        if g not in model.genes:
+        if g not in model.genes and (not is_me_model or 'RNA_%s' % g not in model.metabolites):
             continue
+        if is_me_model:
+            # just use iJO genes
+            me_model = model
+            model = IJO1366
         gene_obj = model.genes.get_by_id(g)
         if use_greedy_knockouts:
             reactions = gene_obj.reactions
@@ -263,6 +274,11 @@ def get_reaction_knockouts(model, design, use_greedy_knockouts):
             r = gene_obj.remove_from_model(model)
             reaction_knockouts = reaction_knockouts.union(r)
     greedy_knockouts = reaction_knockouts.difference(gene_reaction_knockouts)
+
+    if is_me_model:
+        reaction_knockouts = it.chain(*[find_me_reactions(me_model, r) for r in reaction_knockouts])
+        greedy_knockouts = it.chain(*[find_me_reactions(me_model, r) for r in greedy_knockouts])
+
     return list(reaction_knockouts), list(greedy_knockouts)
 
 def error_series(series, err):
@@ -339,20 +355,17 @@ def run_simulation(series, gene_ko=False, loaded_models=None,
                                                                   use_greedy_knockouts)
 
     # update the model
-    model = apply_environment(model, environment)
-    model = apply_design(model, design, use_greedy_knockouts)
+    try:
+        model = apply_environment(model, environment)
+        model = apply_design(model, design, use_greedy_knockouts)
+    except SetUpModelError as e:
+        return error_series(series, e)
 
     # run minimize_maximize
-    try:
-        min_max_solution = minimize_maximize(setup)
-    except SetUpModelError as e:
-        return error_series(series, e)
+    min_max_solution = minimize_maximize(setup)
 
     # run theoretical yield
-    try:
-        absolute_max_product, heterologous_pathway_flux = get_absolute_max(setup)
-    except SetUpModelError as e:
-        return error_series(series, e)
+    absolute_max_product, heterologous_pathway_flux = get_absolute_max(setup)
 
     new_series = pd.Series({
         'substrate_exchanges': environment.substrate_exchanges,

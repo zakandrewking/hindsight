@@ -53,7 +53,7 @@ translate_keys = {
     'year':    'year',
     'author':  'authors',
 }
-note_keys = ['target', 'additions', 'deletions', 'parent', 'aerobicity',
+note_keys = ['target', 'additions', 'deletions', 'strain', 'parent', 'aerobicity',
              'simulation', 'evolved', 'see_study', 'substrate',
              'yield', 'g_byproduct_order', 'molar_byproduct_order',
              'byproduct_order', 'strategies', 'gene_details']
@@ -81,7 +81,7 @@ def extract_key(key, s, default=np.nan):
 
 def parse_order_string(s):
     out = {}
-    for y in [x.strip().split() for x in s.split(',')]:
+    for y in [x.strip().rsplit(None, 1) for x in s.split(',')]:
         if len(y) == 2:
             out[y[0].strip()] = float(y[1].strip())
         else:
@@ -203,8 +203,9 @@ def process_df(df, note_as_html=False):
 
     # take out html
     def replace_br(t):
-        nn = t.replace('\n', ' ')
-        return re.sub(r'<br ?/?>', '\n', nn)
+        nn = t.replace('\n', ' ').replace('</div>', '').replace('<div>', '\n')
+        br = re.sub(r'<br\s*/?>', '\n', nn)
+        return re.sub('<[^>]+>', '', br)
     if note_as_html:
         df.loc[:, 'notes'] = df.loc[:, 'notes'].apply(replace_br)
 
@@ -236,11 +237,11 @@ def process_df(df, note_as_html=False):
     df['c_byproduct_order'] = df.apply(parse_byproduct_order, axis=1)
 
     # get b genes
-    def split_on_comma(x):
+    def split_on_comma_or_space(x):
         if x == 'none':
             return []
-        return [y.strip() for y in x.split(',')]
-    df['deletions_b'] = df['deletions'].map(split_on_comma).map(get_b_genes)
+        return [y.strip() for y in re.split(r'\s*,\s*|\s+', x)]
+    df['deletions_b'] = df['deletions'].map(split_on_comma_or_space).map(get_b_genes)
 
     # native versus nonnative
     df['native'] = df['target'].apply(native_non_native,

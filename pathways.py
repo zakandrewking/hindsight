@@ -4,10 +4,10 @@ from minime.solve.algorithms import binary_search, solve_at_growth_rate
 
 no_route_exchanges = [
     # in the byproduct secretion profile, but not in the model
-    # 'EX_2phetoh_e',
-    # 'EX_iamoh_e',
-    # 'EX_2mbtoh_e',
-    # 'EX_3hv_e',
+    'EX_2phetoh_e',
+    'EX_iamoh_e',
+    'EX_2mbtoh_e',
+    'EX_3hv_e',
 ]
 
 EXCHANGE_NAMES = {
@@ -78,6 +78,8 @@ EXCHANGE_NAMES = {
     '(R,R)-2,3-BDO': 'EX_btd__RR_e',
     'meso-2,3-BDO': 'EX_btd__meso_e',
     'methyl ketones': 'EX_2ptone_e',
+    'Xylitol': 'EX_xylt_e',
+    'Crotonic acid': 'EX_crot_e',
 }
 def to_list(v):
     return v if isinstance(v, list) else [v]
@@ -389,7 +391,7 @@ def get_designs():
         # --------------------
 
         # Lim2013-sy, Saini2014-br, Volker2014-pd
-         'butyrate_crt_ter': [
+        'butyrate_crt_ter': [
              {
                  'btcoa_c': {'formula': 'C25H38N7O17P3S', 'name': 'butyryl-CoA'}, # NOTE already in iJO1366 and iAF1260(b)
              },
@@ -420,24 +422,56 @@ def get_designs():
         # H2, butanone
         # -----------
 
-        'fhl':                  # already in iJO
-        [{}, {}, None, {}],
+        # already in iJO
+        'fhl': [{}, {}, None, {}],
 
-        'cHis2A-shmks2-shmks1':
-        [{'2ptone_c': {'formula': 'C5H10O', 'name': '2-pentatone'},
-          'keto_acid_c': {'formula': 'C6H10O3', 'name': '6C keto aci'}},
-         {'THE': {'3ohexACP_c': -1, 'h2o_c': -1, 'keto_acid_c': 1, 'ACP_c': 1},
-          'MKS': {'keto_acid_c': -1, '2ptone_c': 1, 'co2_c': 1},
-          'EX_2ptone_e': {'2ptone_c': -1}},
-         None, {'EX_2ptone_e': (0, 1000)}],
+        'cHis2A-shmks2-shmks1': [
+            {
+                '2ptone_c': {'formula': 'C5H10O', 'name': '2-pentatone'},
+                'keto_acid_c': {'formula': 'C6H10O3', 'name': '6C keto acid'},
+            },
+            {
+                'THE': {'3ohexACP_c': -1, 'h2o_c': -1, 'keto_acid_c': 1, 'ACP_c': 1},
+                'MKS': {'keto_acid_c': -1, '2ptone_c': 1, 'co2_c': 1},
+                'EX_2ptone_e': {'2ptone_c': -1},
+            },
+            None,
+            {
+                'EX_2ptone_e': (0, 1000),
+            }
+        ],
 
         # ----------------
         # Xylitol
         # ----------------
 
-        'xylitol': [
+        'xylitol_xr': [
+            {
+                'xylt_c': {'formula': 'C5H12O5', 'name': 'Xylitol'},
+            },
+            {
+                'XYLR': {'h_c': -1, 'nadph_c': -1, 'xyl__D_c': -1, 'nadp_c': 1, 'xylt_c': 1},
+                'EX_xylt_e': {'xylt_c': -1},
+            },
+            None,
+            {
+                'EX_xylt_e': (0, 1000)
+            },
+        ],
 
-        ]
+        'crotonic_acid': [
+            {
+                'crot_c': {'formula': 'C4H6O2', 'name': 'Crotonic acid'},
+            },
+            {
+                'CROT': {'b2coa_c': -1, 'h2o_c': -1, 'crot_c': 1, 'coa_c': 1},
+                'EX_crot_e': {'crot_c': -1},
+            },
+            None,
+            {
+                'EX_crot_e': (0, 1000),
+            },
+        ],
     }
 
 def get_core_designs():
@@ -704,7 +738,24 @@ def get_core_designs():
                      '3ohexACP_c': 1.0, 'co2_c': 1.0, 'ACP_c': 1.0,
                      'h_c': -1.0},
           'HCO3E': {'h2o_c': -1.0, 'co2_c': -1.0, 'h_c': 1.0, 'hco3_c': 1.0}},
-         None, {'KAS15': (0, 1000)}]
+         None, {'KAS15': (0, 1000)}],
+
+        # ----------------
+        # Xylitol
+        # ----------------
+
+        'xylitol_xr': [
+            {
+                'xyl__D_c': {'formula': 'C5H10O5', 'name': 'D-Xylose'},
+            },
+            {
+                'EX_xyl__D_e': {'xyl__D_c': -1},
+            },
+            None,
+            {
+                'EX_xyl__D_e': (0, 1000),
+            },
+        ]
     }
 
 def get_iJR904_designs():
@@ -818,6 +869,26 @@ def get_iAF1260_designs():
          None, None]
     }
 
+def get_me_designs():
+    return {
+        'cHis2A-shmks2-shmks1': [
+            {
+                '2ptone_c': {'formula': 'C5H10O', 'name': '2-pentatone'},
+                'keto_acid_c': {'formula': 'C6H10O3', 'name': '6C keto acid'},
+            },
+            {
+                'THE': {'EG50003-MONOMER_mod_pan4p_mod_3ohex': -1, 'h2o_c': -1,
+                        'keto_acid_c': 1, 'EG50003-MONOMER_mod_pan4p': 1},
+                'MKS': {'keto_acid_c': -1, '2ptone_c': 1, 'co2_c': 1},
+                'EX_2ptone_e': {'2ptone_c': -1},
+            },
+            None,
+            {
+                'EX_2ptone_e': (0, 1000),
+            }
+        ],
+    }
+
 def add_heterologous_pathway(model, additions, ignore_repeats=False, copy=False):
     if copy:
         model = model.copy()
@@ -827,22 +898,28 @@ def add_heterologous_pathway(model, additions, ignore_repeats=False, copy=False)
     core_designs = get_core_designs()
     iJR904_designs = get_iJR904_designs()
     iAF1260_designs = get_iAF1260_designs()
+    me_designs = get_me_designs()
     if additions in designs:
         if model.id == 'e_coli_core' and (additions in core_designs):
             model = add_pathway(model, *core_designs[additions],
                                 check_mass_balance=True,
                                 check_charge_balance=False,
                                 ignore_repeats=ignore_repeats)
-        if model.id == 'iJR904' and (additions in iJR904_designs):
+        elif model.id == 'iJR904' and (additions in iJR904_designs):
             model = add_pathway(model, *iJR904_designs[additions],
                                 check_mass_balance=True,
                                 check_charge_balance=False,
                                 ignore_repeats=ignore_repeats)
-        if 'iAF1260' in model.id and (additions in iAF1260_designs):
+        elif 'iAF1260' in model.id and (additions in iAF1260_designs):
             model = add_pathway(model, *iAF1260_designs[additions],
                                 check_mass_balance=True,
                                 check_charge_balance=False,
                                 ignore_repeats=ignore_repeats)
+        elif model.id == 'ME' and (additions in me_designs):
+            return add_pathway(model, *me_designs[additions],
+                               check_mass_balance=True,
+                               check_charge_balance=False,
+                               ignore_repeats=ignore_repeats)
         return add_pathway(model, *designs[additions], check_mass_balance=True,
                            check_charge_balance=False,
                            ignore_repeats=ignore_repeats)
