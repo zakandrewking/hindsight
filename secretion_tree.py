@@ -6,7 +6,8 @@ sequentially knocked out.
 from me_scripts.hindsight.hindsight import (load_models_to_compare,
                                             get_secretion, setup_for_series,
                                             apply_design, apply_environment,
-                                            error_series)
+                                            error_series, me_optimize_growth,
+                                            Design, SimulationSetup)
 from me_scripts.hindsight.variables import min_biomass, SetUpModelError
 from me_scripts.parallel_pandas import apply_p
 from theseus import load_model
@@ -28,7 +29,7 @@ Secretions.__repr__ = lambda self: '<Secretions {self.knockouts}, {self.growth_r
 class FoundReaction(Exception):
     pass
 
-def run_secretions_for_knockouts_dataframe(df, threads, debug=False):
+def run_secretions_for_knockouts_dataframe(df, outfile, threads, debug=False):
     """Runs secretion tree for the whole DataFrame.
 
     Arguments
@@ -43,26 +44,30 @@ def run_secretions_for_knockouts_dataframe(df, threads, debug=False):
     """
     loaded_models = load_models_to_compare(m_only=False)
     if debug:
-        res = run_secretions_for_knockouts_series(df.loc[idx[:, ['e_coli_core']], :].reset_index().iloc[0],
+
+        res = run_secretions_for_knockouts_series(df.loc[idx[['Atsumi2008-ao'], ['ME']], :].reset_index().iloc[0],
                                                   loaded_models=loaded_models)
         out_df = pd.DataFrame([res]).set_index(df.index.names)
     else:
         out_df = apply_p(df, run_secretions_for_knockouts_series,
                          loaded_models=loaded_models, threads=threads)
-    out_df.reset_index().to_json(sys.stdout)
+    out_df.reset_index().to_json(outfile)
 
 def run_secretions_for_knockouts_series(series, loaded_models=None):
     # set up
     setup = setup_for_series(series, loaded_models, True)
-    try:
-        model = apply_environment(setup.model, setup.environment)
-        model = apply_design(setup.model, setup.design, setup.use_greedy_knockouts)
-    except SetUpModelError as e:
-        return error_series(series, e)
+
+    # do not knock out the genes in the model
+    setup = SimulationSetup(
+        setup.model,
+        setup.environment,
+        Design(setup.design.heterologous_pathway, [], setup.design.target_exchange),
+        setup.use_greedy_knockouts
+    )
 
     ignore_exchanges = ['EX_h2_e', 'EX_o2_e', 'EX_co2_e']
     try:
-        results = secretions_for_knockouts(model,
+        results = secretions_for_knockouts(setup,
                                            raise_if_found=setup.design.target_exchange,
                                            ignore_exchanges=ignore_exchanges)
         out_series = pd.Series({
@@ -76,21 +81,24 @@ def run_secretions_for_knockouts_series(series, loaded_models=None):
             'can_secrete': True,
             'data': np.nan,
         })
+    except SetUpModelError as e:
+        return error_series(series, e)
+
     out_series['paper'] = series['paper']
     out_series['model'] = series['model']
     return out_series
 
-def secretions_for_knockouts(model, knockouts=[], max_depth=10, depth=0,
+def secretions_for_knockouts(setup, knockouts=[], max_depth=10, depth=0,
                              ignore_exchanges=[], raise_if_found=None,
                              growth_cutoff=min_biomass, flux_cutoff=0.1):
-    """Accepts a model and a set of knockouts.
+    """Accepts a SimulationSetup and a set of knockouts.
 
     Returns a tree of secretions using nested dictionaries.
 
     Arguments
     ---------
 
-    model: The cobra model.
+    setup: SimulationSetup.
 
     knockouts: A list of reaction IDs to knock out.
 
@@ -112,31 +120,36 @@ def secretions_for_knockouts(model, knockouts=[], max_depth=10, depth=0,
         return None
 
     # always copy the model
+    model = setup.model
     if model.id == 'ME':
         model = load_model(model.id)
     else:
         model = model.copy()
 
-    # knock out the reactions
+    # knock out the reactions by adding them to other_bounds
     for ko in knockouts:
-        model.reactions.get_by_id(ko).knock_out()
+        setup.environment.other_bounds[ko] = (0, 0)
+
+    # set up model. Have to do this every time because the ME model cannot be
+    # copied
+    model = apply_environment(model, setup.environment)
+    model = apply_design(model, setup.design, setup.use_greedy_knockouts)
 
     # solve the problem
-    solution = model.optimize()
-    if solution.f is None or solution.f <= growth_cutoff:
+    sol = me_optimize_growth(model) if model.id == 'ME' else model.optimize()
+    if sol.f is None or sol.f <= growth_cutoff:
         return None
     else:
-        secretion = Secretions(knockouts, solution.f,
-                               *zip(*get_secretion(model, solution.x_dict, sort=False)))
-        if raise_if_found:
-            if raise_if_found in secretion.exchange_reactions:
-                index = secretion.exchange_reactions.index(raise_if_found)
-                if secretion.fluxes[index] > flux_cutoff:
-                    raise FoundReaction(str(secretion))
+        secretion = Secretions(knockouts, sol.f,
+                               *zip(*get_secretion(model, sol.x_dict, sort=False)))
+        if raise_if_found is not None and raise_if_found in secretion.exchange_reactions:
+            index = secretion.exchange_reactions.index(raise_if_found)
+            if secretion.fluxes[index] > flux_cutoff:
+                raise FoundReaction(str(secretion))
         return {
-            'data': None if raise_if_found else secretion,
+            'secretion': secretion,
             'children': {
-                new_knockout: secretions_for_knockouts(model, knockouts + [new_knockout],
+                new_knockout: secretions_for_knockouts(setup, knockouts + [new_knockout],
                                                        max_depth, depth + 1,
                                                        ignore_exchanges, raise_if_found,
                                                        growth_cutoff, flux_cutoff)
