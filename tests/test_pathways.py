@@ -3,18 +3,22 @@ from me_scripts.hindsight.pathways import (add_heterologous_pathway,
                                            no_route_exchanges,
                                            exchange_for_metabolite_name,
                                            add_all_heterologous_pathways)
+from me_scripts.hindsight.hindsight import download_or_load_model_me_placeholder
 from me_scripts.hindsight.variables import min_biomass
 from theseus import setup_model, load_model
-from theseus.bigg import download_model
 from minime.solve.algorithms import solve_at_growth_rate, binary_search
 from minime.solve.symbolic import compile_expressions
 import pytest
 from pytest import raises
 
-DEBUG = True
+DEBUG = False
 
-models_to_test = ['iJO1366']
-substrates = ['EX_glc__D_e', 'EX_xyl__D_e']
+models_to_test = ['iJO1366', 'iJR904', 'e_coli_core']
+def substrates(additions):
+    if 'xylitol' in additions:
+        return ['EX_glc__D_e', 'EX_xyl__D_e']
+    else:
+        return ['EX_glc__D_e']
 designs = get_designs()
 if DEBUG:
     pathway_names = ['crotonic_acid']
@@ -30,12 +34,12 @@ def pathway_tuple(request):
 def model(request):
     # return the loaded model
     model_id = request.param
-    return download_model(model_id)
+    return download_or_load_model_me_placeholder(model_id)
 
 def test_add_heterologous_pathway(model, pathway_tuple):
     additions, design = pathway_tuple
     model = add_heterologous_pathway(model, additions)
-    model = setup_model(model, substrates, aerobic=False)
+    model = setup_model(model, substrates(additions), aerobic=False)
     # produce some biomass
     biomass = model.objective.iterkeys().next()
     biomass.lower_bound = min_biomass
@@ -56,7 +60,7 @@ def test_add_heterologous_pathway(model, pathway_tuple):
 
 def test_add_heterologous_pathway_me(pathway_tuple):
     additions, design = pathway_tuple
-    model = setup_model(load_model('ME'), substrates, aerobic=False,
+    model = setup_model(load_model('ME'), substrates(additions), aerobic=False,
                         sur=1000, max_our=1000)
     model = add_heterologous_pathway(model, additions)
     # test the exchanges
@@ -80,7 +84,7 @@ def test_repeat_additions(model):
         m = add_heterologous_pathway(m, des)
 
 def test_add_all_heterologous_pathways():
-    model = download_model('iJO1366')
+    model = download_or_load_model_me_placeholder('iJO1366')
     model = add_all_heterologous_pathways(model)
     assert 'btal_c' in model.metabolites
     assert 'HACD1' in model.reactions

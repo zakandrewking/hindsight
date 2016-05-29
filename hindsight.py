@@ -4,7 +4,8 @@ from me_scripts.hindsight.pathways import (add_heterologous_pathway,
                                            get_designs,
                                            exchange_for_metabolite_name)
 from me_scripts.hindsight.variables import (min_biomass, default_sur, max_our,
-                                            NotFoundError, SetUpModelError)
+                                            supplement_uptake, NotFoundError,
+                                            SetUpModelError)
 
 import numpy as np
 import pandas as pd
@@ -34,7 +35,7 @@ def download_or_load_model_me_placeholder(name):
     elif name in private_models:
         return load_model(name)
     else:
-        return download_model(name, host='http://zak.ucsd.edu:8888/api/v2/')
+        return download_model(name, host='http://bigg.ucsd.edu/api/v2/')
 
 IJO1366 = download_or_load_model_me_placeholder('iJO1366')
 
@@ -99,15 +100,17 @@ def apply_environment(model, environment):
     sur = 1000 if model.id == 'ME' else default_sur / len(environment.substrate_exchanges)
     this_max_our = 1000 if model.id == 'ME' else max_our
 
-    for substrate_exchange in environment.substrate_exchanges:
-        if not substrate_exchange in model.reactions:
-            raise SetUpModelError('Substrate exch. not found: %s' % substrate_exchange)
+    for sub in environment.substrate_exchanges + environment.supplement_exchanges:
+        if not sub in model.reactions:
+            raise SetUpModelError('Substrate exch. not found: %s' % sub)
 
     model = setup_model(model, environment.substrate_exchanges,
                         aerobic=environment.aerobic, sur=sur,
                         max_our=this_max_our)
 
     other_bounds = environment.other_bounds
+    for supp in environment.supplement_exchanges:
+        other_bounds[supp] = (-supplement_uptake, 1000)
     # deal with me reactions
     if model.id == 'ME':
         new_bounds = {}
@@ -139,9 +142,6 @@ def apply_design(model, design, use_greedy_knockouts):
     if design.target_exchange == 'H2':
         model = add_heterologous_pathway(model, 'fhl')
     reaction_kos, _ = get_reaction_knockouts(model, design, use_greedy_knockouts)
-    # get me reactions
-    if model.id == 'ME':
-        reaction_kos = it.chain(*[find_me_reactions(model, r) for r in reaction_kos])
     # perform knockouts
     for r in reaction_kos:
         model.reactions.get_by_id(r).knock_out()
@@ -193,14 +193,13 @@ def minimize_maximize(sim_setup, biomass_fraction=0.9999,
     biomass_reaction = next(iter(model.objective.keys()))
 
     substrate_exchanges = sim_setup.environment.substrate_exchanges
+    supplement_exchanges = sim_setup.environment.supplement_exchanges
     target_exchange = sim_setup.design.target_exchange
 
-    # sol = me_optimize_growth(model) if model.id == 'ME' else model.optimize()
+    sol = me_optimize_growth(model) if model.id == 'ME' else model.optimize()
 
-    # growth_rate = 0.0 if sol.f is None else sol.f
-    growth_rate = np.nan
-    # if growth_rate < min_biomass:
-    if True:
+    growth_rate = 0.0 if sol.f is None else sol.f
+    if growth_rate < min_biomass:
         yield_minmax = (np.nan, np.nan)
         minmax = (np.nan, np.nan)
         max_secretion = np.nan
@@ -229,8 +228,8 @@ def minimize_maximize(sim_setup, biomass_fraction=0.9999,
             # loop through targets and add carbons
             def c_yield(sub):
                 c = carbons_for_exchange_reaction(model.reactions.get_by_id(sub))
-                return c * default_sur / len(substrate_exchanges)
-            substrate_carbon_uptake = sum(c_yield(sub) for sub in substrate_exchanges)
+                return c * -max_flux[sub]
+            substrate_carbon_uptake = sum(c_yield(sub) for sub in substrate_exchanges + supplement_exchanges)
             yield_minmax = tuple([x * carbons / substrate_carbon_uptake for x in minmax])
         else:
             yield_minmax = (np.nan, np.nan)
@@ -253,26 +252,30 @@ def get_reaction_knockouts(model, design, use_greedy_knockouts):
 
     """
     is_me_model = model.id == 'ME'
+    if is_me_model:
+        # just use iJO genes
+        me_model = model
+        model = IJO1366
+    # copy model because we have to change it to determine the reaction
+    # knockouts
+    model = model.copy()
     reaction_knockouts = set()
     gene_reaction_knockouts = set()
     for g in design.gene_knockouts:
-        if g not in model.genes and (not is_me_model or 'RNA_%s' % g not in model.metabolites):
+        if g not in model.genes and (not is_me_model or 'RNA_%s' % g not in
+                                     model.metabolites):
             continue
-        if is_me_model:
-            # just use iJO genes
-            me_model = model
-            model = IJO1366
         gene_obj = model.genes.get_by_id(g)
         if use_greedy_knockouts:
             reactions = gene_obj.reactions
-            for r in reactions:
-                r.knock_out()
             reaction_knockouts = reaction_knockouts.union([x.id for x in reactions])
-            rg = [x.id for x in find_gene_knockout_reactions(model, [model.genes.get_by_id(g)])]
-            gene_reaction_knockouts = gene_reaction_knockouts.union(rg)
+            r = gene_obj.remove_from_model(model)
+            if r:
+                gene_reaction_knockouts = gene_reaction_knockouts.union(r)
         else:
             r = gene_obj.remove_from_model(model)
-            reaction_knockouts = reaction_knockouts.union(r)
+            if r:
+                reaction_knockouts = reaction_knockouts.union(r)
     greedy_knockouts = reaction_knockouts.difference(gene_reaction_knockouts)
 
     if is_me_model:
@@ -285,31 +288,8 @@ def error_series(series, err):
     """Error as series"""
     return series.append(pd.Series({'error': str(err)}))
 
-def run_simulation(series, gene_ko=False, loaded_models=None,
-                   use_greedy_knockouts=True):
-    """Run a simulation on a DataFrame row.
-
-    Example:
-
-        df.apply(run_simulation, axis=1, loaded_models=loaded_models)
-
-    or:
-
-        from me_scripts.parallel_pandas import apply_p
-        apply_p(df, run_simulation, loaded_models=loaded_models)
-
-    The DataFrame should have a multi-index with (paper, model). The function
-    uses the keys:
-
-        ['additions', 'substrate', 'target', 'aerobicity', 'deletions_b']
-
-    If any of the following columns are already in the DataFrame, it will throw
-    an error:
-
-        [ TODO ]
-
-    """
-
+def setup_for_series(series, loaded_models, use_greedy_knockouts):
+    """Get a SimulationSetup for the series."""
     # copy the model
     model_id = series['model']
     if model_id == 'ME':
@@ -347,36 +327,61 @@ def run_simulation(series, gene_ko=False, loaded_models=None,
     environment = Environment(substrate_exchanges, supplement_exchanges,
                               aerobic, other_bounds)
     design = Design(heterologous_pathway, gene_knockouts, target_exchange)
-    setup = SimulationSetup(model, environment, design, use_greedy_knockouts)
+    return SimulationSetup(model, environment, design, use_greedy_knockouts)
+
+def run_simulation(series, loaded_models=None, use_greedy_knockouts=True):
+    """Run a simulation on a DataFrame row.
+
+    Example:
+
+        df.apply(run_simulation, axis=1, loaded_models=loaded_models)
+
+    or:
+
+        from me_scripts.parallel_pandas import apply_p
+        apply_p(df, run_simulation, loaded_models=loaded_models)
+
+    The DataFrame should have a multi-index with (paper, model). The function
+    uses the keys:
+
+        ['additions', 'substrate', 'target', 'aerobicity', 'deletions_b']
+
+    If any of the following columns are already in the DataFrame, it will throw
+    an error:
+
+        [ TODO ]
+
+    """
+
+    setup = setup_for_series(series, loaded_models, use_greedy_knockouts)
 
     # check the setup
     genes_not_in_model = check_setup(setup)
-    reaction_knockouts, greedy_knockouts = get_reaction_knockouts(model, design,
-                                                                  use_greedy_knockouts)
+    reaction_knockouts, greedy_knockouts \
+        = get_reaction_knockouts(setup.model, setup.design, setup.use_greedy_knockouts)
 
     # update the model
     try:
-        model = apply_environment(model, environment)
-        model = apply_design(model, design, use_greedy_knockouts)
+        # set up
+        model = apply_environment(setup.model, setup.environment)
+        model = apply_design(setup.model, setup.design, setup.use_greedy_knockouts)
+        # run minimize_maximize
+        min_max_solution = minimize_maximize(setup)
+        # run theoretical yield
+        absolute_max_product, heterologous_pathway_flux = get_absolute_max(setup)
     except SetUpModelError as e:
         return error_series(series, e)
 
-    # run minimize_maximize
-    min_max_solution = minimize_maximize(setup)
-
-    # run theoretical yield
-    absolute_max_product, heterologous_pathway_flux = get_absolute_max(setup)
-
     new_series = pd.Series({
-        'substrate_exchanges': environment.substrate_exchanges,
-        'supplement_exchanges': environment.supplement_exchanges,
-        'aerobic': environment.aerobic,
-        'other_bounds': environment.other_bounds,
-        'heterologous_pathway': design.heterologous_pathway,
-        'target_exchange': design.target_exchange,
-        'gene_knockouts': design.gene_knockouts,
+        'substrate_exchanges': setup.environment.substrate_exchanges,
+        'supplement_exchanges': setup.environment.supplement_exchanges,
+        'aerobic': setup.environment.aerobic,
+        'other_bounds': setup.environment.other_bounds,
+        'heterologous_pathway': setup.design.heterologous_pathway,
+        'target_exchange': setup.design.target_exchange,
+        'gene_knockouts': setup.design.gene_knockouts,
         'use_greedy_knockouts': use_greedy_knockouts,
-        'target_exchange': design.target_exchange,
+        'target_exchange': setup.design.target_exchange,
         'genes_not_in_model': genes_not_in_model,
         'reaction_knockouts': reaction_knockouts,
         'greedy_knockouts': greedy_knockouts,
@@ -426,10 +431,130 @@ def get_secretion(model, flux_dict, flux_threshold=1e-3, sort=True,
 
     """
     secretions = [(k, v) for k, v in flux_dict.iteritems()
-                  if 'EX_' in k and v > flux_threshold and
+                  if k.startswith('EX_') and v > flux_threshold and
                   (carbons_for_exchange_reaction(model.reactions.get_by_id(k)) > 0 or
                    k in non_carbon_secretion)]
     if sort:
         return sorted(secretions, key=lambda x: x[1], reverse=True)
     else:
         return secretions
+
+def normalize_by_carbons(l, model=None):
+    """Get a list of secretions by total carbon molecules / time.
+
+    Arguments
+    ---------
+
+    l: A list of secretions (e.g. generated by get_secretion).
+
+    model: A model containing all possible exchange reactions.
+
+    """
+    if type(l) is float and np.isnan(l):
+        return l
+    not_in_model = [(a,b) for a, b in l if a not in model.reactions]
+    # if len(not_in_model) > 0:
+    # print 'Ignoring reaction not in %s: %s' % (model, not_in_model)
+    l = [(a, b*carbons_for_exchange_reaction(model.reactions.get_by_id(a))) for a, b in l
+            if a in model.reactions]
+    m = sum([x[1] for x in l])
+    return [(x[0], float(x[1])/m) for x in l]
+
+# ---------------------------------------------
+# Lethal genotypes
+# ---------------------------------------------
+
+LethalInteraction = namedtuple('LethalInteraction', ['model', # str
+                                                     'reactions', # list of str IDs
+                                                     'growth_rate',
+                                                     'example_paper',
+                                                     'example_genotype'])
+
+def find_summary_lethal_reactions(sims, max_combinations=5,
+                                  models=m_models_to_compare, debug_limit=None):
+    """Returns a summary dataframe of all the lethal combinations and cases where
+    max_combinations was not enough to find the lethal interaction.
+
+    """
+    to_string = lambda x: ','.join(sorted(x))
+    out = [] # list of LethalInteraction's
+    not_enough_combinations = []
+    dc = 0
+    for paper in ProgressBar(list(sims.reset_index()['paper'].unique())):
+        res, ne = find_lethal_reactions(sims, paper, max_combinations, models, False)
+        not_enough_combinations += ne
+        out += res
+        if debug_limit is not None and dc >= debug_limit:
+            break
+        dc += 1
+    df = pd.DataFrame.from_records(out, columns=out[0]._fields, index=['model', 'example_paper'])
+    return df, not_enough_combinations
+
+def find_lethal_reactions(sims, paper, max_combinations=3,
+                          models=m_models_to_compare, print_solution=False,
+                          gr_lim=1e-3):
+    def get_gr(model):
+        sol = model.optimize()
+        return 0.0 if sol.f is None else sol.f
+
+    out = []; could_not_finds = []; not_enough_combinations = []
+    for model_name in models:
+        case = get_case(sims, paper, model=model_name, first=True)
+        model = load_model(model_name)
+        try:
+            m, _, _, _, _, _, _ = get_model(model, case.additions, case.substrate,
+                                            case.target, case.aerobicity,
+                                            case.deletions_b, copy=True)
+        except SetUpModelError as e:
+            continue
+
+        if get_gr(m) > gr_lim:
+            continue
+
+        # get the model with no deletions
+        m, _, _, _, _, _, _ = get_model(model, case.Additions, case.Substrate,
+                                        case.Target, case.Aerobicity, 'none')
+
+        # knock out reactions associated with genes
+        all_reactions = set()
+        for g in set(case.deletions_b):
+            try:
+                to_remove = [x.id for x in m.genes.get_by_id(g).reactions]
+            except KeyError:
+                could_not_finds.append('(Could not find gene %s in model %s)' % \
+                                       (g, model_name))
+                continue
+            all_reactions = all_reactions.union(to_remove)
+
+        # try reaction combinations
+        count = 1; found_lethal = False
+        while not found_lethal and count <= max_combinations:
+            for rs in combinations(all_reactions, count):
+                m2 = model.copy()
+                for r in rs:
+                    m2.reactions.get_by_id(r).knock_out()
+                gr = get_gr(m2)
+                if gr < gr_lim:
+                    found_lethal = True
+                    if print_solution:
+                        print '%s, %s: %.3f' % (model_name, '+'.join(rs), gr)
+                    else:
+                        out.append(LethalInteraction(model_name, rs, gr, paper,
+                                                     case.deletions))
+            count += 1
+
+        # not enough combinations
+        if not found_lethal:
+            if print_solution:
+                print '%s: Could not find a lethal combination with combinations of %d' % \
+                    (model_name, max_combinations)
+            else:
+                not_enough_combinations.append([model_name, paper, case.deletions])
+
+    if print_solution:
+        if len(could_not_finds) > 0:
+            print
+        for f in could_not_finds:
+            print f
+    else:
+        return out, not_enough_combinations

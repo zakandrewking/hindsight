@@ -90,7 +90,7 @@ def exchange_for_metabolite_name(name):
             if isinstance(v, dict):
                 return to_list(v['substrates']), to_list(v['supplements'])
             else:
-                return to_list(v), None
+                return to_list(v), []
     raise NotFoundError('Could not find %s' % name)
 
 
@@ -755,7 +755,27 @@ def get_core_designs():
             {
                 'EX_xyl__D_e': (0, 1000),
             },
-        ]
+        ],
+
+        # ----------------
+        # Xylitol
+        # ----------------
+
+        'crotonic_acid': [
+            {
+                '3hbcoa_c': {'formula': 'C25H38N7O18P3S', 'name': '(S)-3-Hydroxybutanoyl-CoA'},
+                'aacoa_c': {'formula': 'C25H36N7O18P3S', 'name': 'Acetoacetyl-CoA'},
+                'b2coa_c': {'formula': 'C25H36N7O17P3S', 'name': 'Crotonoyl-CoA'},
+            },
+            {
+                'ACACT1r': {'aacoa_c': 1.0, 'accoa_c': -2.0, 'coa_c': 1.0},
+                'ECOAH1': {'3hbcoa_c': -1.0, 'b2coa_c': 1.0, 'h2o_c': 1.0},
+                'HACD1': {'3hbcoa_c': 1.0, 'aacoa_c': -1.0, 'h_c': -1.0,
+                          'nad_c': 1.0, 'nadh_c': -1.0},
+            },
+            None,
+            None,
+        ],
     }
 
 def get_iJR904_designs():
@@ -858,7 +878,27 @@ def get_iJR904_designs():
           '3OAS60': {'butACP_c': -1.0, 'malACP_c': -1.0,
                      '3ohexACP_c': 1.0, 'co2_c': 1.0, 'ACP_c': 1.0,
                      'h_c': -1.0}},
-         None, None]
+         None,
+         None
+        ],
+
+        # ----------------
+        # Xylitol
+        # ----------------
+
+        'crotonic_acid': [
+            {
+                '3hbcoa_c': {'formula': 'C25H38N7O18P3S', 'name': '(S)-3-Hydroxybutanoyl-CoA'},
+                'b2coa_c': {'formula': 'C25H36N7O17P3S', 'name': 'Crotonoyl-CoA'},
+            },
+            {
+                'ECOAH1': {'3hbcoa_c': -1.0, 'b2coa_c': 1.0, 'h2o_c': 1.0},
+                'HACD1': {'3hbcoa_c': 1.0, 'aacoa_c': -1.0, 'h_c': -1.0,
+                          'nad_c': 1.0, 'nadh_c': -1.0},
+            },
+            None,
+            None,
+        ],
     }
 
 def get_iAF1260_designs():

@@ -6,7 +6,7 @@ from me_scripts.hindsight.hindsight import *
 
 import pandas as pd
 import numpy as np
-from numpy.testing import assert_array_equal
+from numpy.testing import assert_array_equal, assert_almost_equal
 import pytest
 
 ex_environment = Environment(['EX_glc__D_e'], [], True, {})
@@ -29,12 +29,14 @@ def test_minimize_maximize_me(me_model):
     me_model = apply_environment(me_model, ex_environment)
     me_model = apply_design(me_model, ex_design, True)
     out = minimize_maximize(sim_setup)
-    assert out.growth_rate > 0.1
-    assert out.minmax[0] > 0.1
-    assert out.minmax[1] > 0.1
+    assert_almost_equal(out.growth_rate, 0.92, decimal=2)
+    assert_almost_equal(out.minmax[0], 0.53, decimal=2)
+    assert_almost_equal(out.minmax[1], 0.53, decimal=2)
+    assert_almost_equal(out.yield_minmax[0], 0.0175, decimal=4)
+    assert_almost_equal(out.yield_minmax[0], 0.0175, decimal=4)
     assert 'EX_ac_e' in [x[0] for x in out.max_secretion]
 
-def test_get_absolute_max():
+def test_get_absolute_max(me_model):
     sim_setup = SimulationSetup(me_model, ex_environment, ex_design, True)
     me_model = apply_environment(me_model, ex_environment)
     me_model = apply_design(me_model, ex_design, True)
@@ -54,3 +56,11 @@ def test_get_reaction_knockouts(me_model):
     assert 'GAPD_FWD_GAPDH-A-CPLX' in kos
     assert 'E4PD_FWD_GAPDH-A-CPLX' in kos
     assert 'E4PD_FWD_GAPDH-A-CPLX' in greedy
+
+def test_get_reaction_knockouts_2(me_model):
+    # broken case, Lin2005-km
+    gene_kos = ['iclR', 'b1136', 'b0723', 'b0724', 'b2296', 'b2297', 'b0871']
+    new_design = Design('pepc', gene_kos, 'EX_ac_e')
+    kos, greedy = get_reaction_knockouts(me_model, new_design, True)
+    assert 'ICDHyr_REV_ISOCITHASE-CPLX_mod_mg2' in kos
+    assert 'ICDHyr_REV_ISOCITHASE-CPLX_mod_mg2' in greedy

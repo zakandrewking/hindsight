@@ -189,6 +189,11 @@ def db_to_df(bibtexparser_db):
         .loc[:, translate_keys.values()]
     )
 
+def split_on_comma_or_space(x):
+    if x == 'none':
+        return []
+    return [z for z in (y.strip() for y in re.split(r'\s*,\s*|\s+', x)) if z != '']
+
 def process_df(df, note_as_html=False):
     # add columns
     df['citation_key'] = df['design']
@@ -237,10 +242,6 @@ def process_df(df, note_as_html=False):
     df['c_byproduct_order'] = df.apply(parse_byproduct_order, axis=1)
 
     # get b genes
-    def split_on_comma_or_space(x):
-        if x == 'none':
-            return []
-        return [y.strip() for y in re.split(r'\s*,\s*|\s+', x)]
     df['deletions_b'] = df['deletions'].map(split_on_comma_or_space).map(get_b_genes)
 
     # native versus nonnative
