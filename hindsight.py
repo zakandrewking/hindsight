@@ -50,7 +50,7 @@ def find_me_reactions(me_model, m_reaction_id):
     return [r.id for r in me_model.reactions if r.id.startswith(m_reaction_id + '_')]
 
 def me_optimize_growth(me):
-    return binary_search(me, min_mu=0, max_mu=1.1, mu_accuracy=1e-5,
+    return binary_search(me, min_mu=min_biomass, max_mu=1.1, mu_accuracy=1e-5,
                          compiled_expressions=me.expressions)
 
 def me_optimize_target(me, growth_rate):
