@@ -1,0 +1,5 @@
+#!/bin/bash
+
+echo "building and running" && \
+    docker build -t hindsight:latest . && \
+    docker run -t -v $(pwd)/results.json:/results.json hindsight:latest
