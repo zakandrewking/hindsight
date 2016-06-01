@@ -7,9 +7,9 @@ import pandas as pd
 import numpy as np
 import re
 
-from hindsight import (exchange_for_metabolite_name,
-                                  add_all_heterologous_pathways,
-                                  no_route_exchanges)
+from hindsight.pathways import (exchange_for_metabolite_name,
+                                add_all_heterologous_pathways,
+                                no_route_exchanges)
 
 from theseus.bigg import download_model
 
