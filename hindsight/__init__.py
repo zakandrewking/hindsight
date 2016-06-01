@@ -1,2 +1,1 @@
-from hindsight import *
-from pathways import *
+from main import *

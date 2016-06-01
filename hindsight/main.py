@@ -1,9 +1,9 @@
 # -*- coding: utf-8 -*-
 
-from me_scripts.hindsight.pathways import (add_heterologous_pathway,
+from hindsight.pathways import (add_heterologous_pathway,
                                            get_designs,
                                            exchange_for_metabolite_name)
-from me_scripts.hindsight.variables import (min_biomass, default_sur, max_our,
+from hindsight.variables import (min_biomass, default_sur, max_our,
                                             supplement_uptake, NotFoundError,
                                             SetUpModelError)
 
@@ -338,7 +338,7 @@ def run_simulation(series, loaded_models=None, use_greedy_knockouts=True):
 
     or:
 
-        from me_scripts.parallel_pandas import apply_p
+        from parallel_pandas import apply_p
         apply_p(df, run_simulation, loaded_models=loaded_models)
 
     The DataFrame should have a multi-index with (paper, model). The function

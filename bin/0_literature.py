@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from me_scripts.hindsight.bibtex import (load_bib, db_to_df, process_df,
+from hindsight.bibtex import (load_bib, db_to_df, process_df,
                                          get_category, get_strategies,
                                          get_max_category, get_max_strategies)
 

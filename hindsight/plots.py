@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from me_scripts.hindsight.hindsight import models_to_compare
+from hindsight import models_to_compare
 
 import numpy as np
 from collections import namedtuple

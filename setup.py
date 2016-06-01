@@ -1,10 +1,7 @@
-try:
-    from setuptools import setup, Command
-except:
-    from distutils.core import setup, Command
+from setuptools import setup, Command, find_packages
 
 setup(
     name='hindsight',
     author='Zachary King',
-    packages=['hindsight'],
+    packages=find_packages(),
 )

@@ -3,13 +3,11 @@ sequentially knocked out.
 
 """
 
-from me_scripts.hindsight.hindsight import (load_models_to_compare,
-                                            get_secretion, setup_for_series,
-                                            apply_design, apply_environment,
-                                            error_series, me_optimize_growth,
-                                            Design, SimulationSetup)
-from me_scripts.hindsight.variables import min_biomass, SetUpModelError
-from me_scripts.parallel_pandas import apply_p
+from hindsight import (load_models_to_compare, get_secretion, setup_for_series,
+                       apply_design, apply_environment, error_series,
+                       me_optimize_growth, Design, SimulationSetup)
+from hindsight.variables import min_biomass, SetUpModelError
+from parallel_pandas import apply_p
 from theseus import load_model
 
 import pandas as pd
@@ -17,6 +15,7 @@ idx = pd.IndexSlice
 import numpy as np
 from collections import namedtuple
 import sys
+from os.path import join, exists
 
 Secretions = namedtuple('Secretions', [
     'knockouts', # iterable
@@ -29,7 +28,7 @@ Secretions.__repr__ = lambda self: '<Secretions {self.knockouts}, {self.growth_r
 class FoundReaction(Exception):
     pass
 
-def run_secretions_for_knockouts_dataframe(df, outfile, threads, debug=False):
+def run_secretions_for_knockouts_dataframe(df, outdir, threads, debug=False):
     """Runs secretion tree for the whole DataFrame.
 
     Arguments
@@ -44,16 +43,21 @@ def run_secretions_for_knockouts_dataframe(df, outfile, threads, debug=False):
     """
     loaded_models = load_models_to_compare(m_only=False)
     if debug:
-
         res = run_secretions_for_knockouts_series(df.loc[idx[['Atsumi2008-ao'], ['ME']], :].reset_index().iloc[0],
-                                                  loaded_models=loaded_models)
+                                                  loaded_models=loaded_models,
+                                                  outdir=outdir)
         out_df = pd.DataFrame([res]).set_index(df.index.names)
     else:
         out_df = apply_p(df, run_secretions_for_knockouts_series,
-                         loaded_models=loaded_models, threads=threads)
-    out_df.reset_index().to_json(outfile)
+                         loaded_models=loaded_models, outdir=outdir,
+                         threads=threads)
+    out_df.to_pickle(join(outdir, 'secretion_tree_results.pickle'))
 
-def run_secretions_for_knockouts_series(series, loaded_models=None):
+def run_secretions_for_knockouts_series(series, loaded_models=None, outdir=None):
+    outfile = join(outdir, '%s_%s.json' % (series['paper'], series['model']))
+    if exists(outfile):
+        return pd.read_json(outfile, typ='series')
+
     # set up
     setup = setup_for_series(series, loaded_models, True)
 
@@ -86,6 +90,8 @@ def run_secretions_for_knockouts_series(series, loaded_models=None):
 
     out_series['paper'] = series['paper']
     out_series['model'] = series['model']
+
+    out_series.to_json(outfile)
     return out_series
 
 def secretions_for_knockouts(setup, knockouts=[], max_depth=10, depth=0,
@@ -140,20 +146,21 @@ def secretions_for_knockouts(setup, knockouts=[], max_depth=10, depth=0,
     if sol.f is None or sol.f <= growth_cutoff:
         return None
     else:
-        secretion = Secretions(knockouts, sol.f,
-                               *zip(*get_secretion(model, sol.x_dict, sort=False)))
-        if raise_if_found is not None and raise_if_found in secretion.exchange_reactions:
-            index = secretion.exchange_reactions.index(raise_if_found)
-            if secretion.fluxes[index] > flux_cutoff:
+        secretion = dict(get_secretion(model, sol.x_dict, sort=False))
+        if raise_if_found is not None and raise_if_found in secretion:
+            fl = secretion[raise_if_found]
+            if fl > flux_cutoff:
                 raise FoundReaction(str(secretion))
         return {
+            'knockouts': knockouts,
+            'growth_rate': sol.f,
             'secretion': secretion,
             'children': {
                 new_knockout: secretions_for_knockouts(setup, knockouts + [new_knockout],
                                                        max_depth, depth + 1,
                                                        ignore_exchanges, raise_if_found,
                                                        growth_cutoff, flux_cutoff)
-                for new_knockout in secretion.exchange_reactions
+                for new_knockout in secretion.iterkeys()
                 if new_knockout not in ignore_exchanges
             }
         }

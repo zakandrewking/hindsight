@@ -1,10 +1,9 @@
-from me_scripts.hindsight.pathways import (add_heterologous_pathway,
-                                           get_designs,
-                                           no_route_exchanges,
-                                           exchange_for_metabolite_name,
-                                           add_all_heterologous_pathways)
-from me_scripts.hindsight.hindsight import download_or_load_model_me_placeholder
-from me_scripts.hindsight.variables import min_biomass
+from hindsight.pathways import (add_heterologous_pathway, get_designs,
+                                no_route_exchanges,
+                                exchange_for_metabolite_name,
+                                add_all_heterologous_pathways)
+from hindsight import download_or_load_model_me_placeholder
+from hindsight.variables import min_biomass
 from theseus import setup_model, load_model
 from minime.solve.algorithms import solve_at_growth_rate, binary_search
 from minime.solve.symbolic import compile_expressions

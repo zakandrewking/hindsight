@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from me_scripts.hindsight.hindsight import load_models_to_compare, run_simulation
-from me_scripts.hindsight.variables import min_biomass
-from me_scripts.parallel_pandas import apply_p
+from hindsight.hindsight import load_models_to_compare, run_simulation
+from hindsight.variables import min_biomass
+from parallel_pandas import apply_p
 
 import pandas as pd
 idx = pd.IndexSlice

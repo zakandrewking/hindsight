@@ -2,7 +2,7 @@
 
 from theseus.bigg import download_model
 from theseus import load_model
-from me_scripts.hindsight.hindsight import *
+from hindsight.main import *
 
 import pandas as pd
 import numpy as np

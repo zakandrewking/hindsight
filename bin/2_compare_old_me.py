@@ -2,9 +2,8 @@
 # -*- coding: utf-8 -*-
 
 from me.problem_and_solver_classes.me_solution import LP_Solution
-from me_scripts.db.queries import m_reactions_for_me_reactions
-from me_scripts.hindsight.pathways import get_designs, add_all_heterologous_pathways
-from me_scripts.hindsight.hindsight import me_exchange_for_metabolite_name
+from hindsight.pathways import get_designs, add_all_heterologous_pathways
+from hindsight.hindsight import me_exchange_for_metabolite_name
 
 import pandas as pd
 idx = pd.IndexSlice

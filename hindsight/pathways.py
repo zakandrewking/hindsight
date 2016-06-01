@@ -1,5 +1,5 @@
 from theseus import add_pathway
-from me_scripts.hindsight.variables import NotFoundError
+from hindsight.variables import NotFoundError
 from minime.solve.algorithms import binary_search, solve_at_growth_rate
 
 no_route_exchanges = [
