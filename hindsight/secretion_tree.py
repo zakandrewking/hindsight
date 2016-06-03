@@ -43,10 +43,13 @@ def run_secretions_for_knockouts_dataframe(df, outdir, threads, debug=False):
     """
     loaded_models = load_models_to_compare(m_only=False)
     if debug:
-        res = run_secretions_for_knockouts_series(df.loc[idx[['Atsumi2008-ao'], ['ME']], :].reset_index().iloc[0],
-                                                  loaded_models=loaded_models,
-                                                  outdir=outdir)
-        out_df = pd.DataFrame([res]).set_index(df.index.names)
+        res = []
+        df_run = df.loc[idx[: , ['ME']], :]
+        for index, row in df_run.reset_index().iterrows():
+            res.append(run_secretions_for_knockouts_series(row,
+                                                           loaded_models=loaded_models,
+                                                           outdir=outdir))
+        out_df = pd.DataFrame(res).set_index(df.index.names)
     else:
         out_df = apply_p(df, run_secretions_for_knockouts_series,
                          loaded_models=loaded_models, outdir=outdir,
@@ -56,7 +59,9 @@ def run_secretions_for_knockouts_dataframe(df, outdir, threads, debug=False):
 def run_secretions_for_knockouts_series(series, loaded_models=None, outdir=None):
     outfile = join(outdir, '%s_%s.json' % (series['paper'], series['model']))
     if exists(outfile):
+        print('Already exists: %s' % outfile)
         return pd.read_json(outfile, typ='series')
+    print('Running: %s' % outfile)
 
     # set up
     setup = setup_for_series(series, loaded_models, True)
