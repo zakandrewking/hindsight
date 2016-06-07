@@ -1,4 +1,4 @@
-#!/usr/bin/env python -W ignore -u
+#!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
 from hindsight.secretion_tree import run_secretions_for_knockouts_dataframe
