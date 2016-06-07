@@ -23,10 +23,15 @@ from theseus.bigg import download_model
 # Models
 # --------------------------------------------------
 
-models_to_compare = ['e_coli_core', 'iJR904', 'iAF1260', 'iAF1260b',
-                     'iJO1366', 'iML1515', 'ME']
-m_models_to_compare = ['e_coli_core', 'iJR904', 'iAF1260', 'iAF1260b',
-                       'iJO1366', 'iML1515']
+models_to_compare = [
+    'e_coli_core', 'iJR904', 'iAF1260', 'iAF1260b', 'iJO1366',
+    # 'iML1515',
+    'ME',
+]
+m_models_to_compare = [
+    'e_coli_core', 'iJR904', 'iAF1260', 'iAF1260b', 'iJO1366',
+    # 'iML1515',
+]
 private_models = ['iML1515', 'ME']
 
 def download_or_load_model_me_placeholder(name):
