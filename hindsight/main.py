@@ -1,11 +1,10 @@
 # -*- coding: utf-8 -*-
 
-from hindsight.pathways import (add_heterologous_pathway,
-                                           get_designs,
-                                           exchange_for_metabolite_name)
+from hindsight.pathways import (add_heterologous_pathway, get_designs,
+                                exchange_for_metabolite_name)
 from hindsight.variables import (min_biomass, default_sur, max_our,
-                                            supplement_uptake, NotFoundError,
-                                            SetUpModelError)
+                                 supplement_uptake, NotFoundError,
+                                 SetUpModelError)
 
 import numpy as np
 import pandas as pd
@@ -368,8 +367,8 @@ def run_simulation(series, loaded_models=None, use_greedy_knockouts=True):
     # update the model
     try:
         # set up
-        model = apply_environment(setup.model, setup.environment)
-        model = apply_design(setup.model, setup.design, setup.use_greedy_knockouts)
+        apply_environment(setup.model, setup.environment)
+        apply_design(setup.model, setup.design, setup.use_greedy_knockouts)
         # run minimize_maximize
         min_max_solution = minimize_maximize(setup)
         # run theoretical yield

@@ -1,5 +1,9 @@
 # -*- coding: utf-8 -*-
 
+from hindsight import (setup_for_series, apply_design, apply_environment,
+                       me_optimize_growth)
+from hindsight.variables import min_biomass
+
 import pandas as pd
 import numpy as np
 import json
@@ -8,15 +12,28 @@ import random
 import logging
 
 def sample_series(series, data_directory):
-    outfile = join(data_directory, '%s_%s_%d_output.json' % (series['paper'],
-                                                             series['model'],
-                                                             series['index']))
+    outfile = join(data_directory, '%s_%d_output.json' % (series['paper'], series['sample']))
+
+    # load models
+    if series['model'] != 'ME':
+        raise Exception('Can only sample ME model.')
+
+    # set up (setup_for_series already loads the ME model again)
+    setup = setup_for_series(series, {'ME': 'placeholder'}, True)
+
+    # run
+    apply_environment(setup.model, setup.environment)
+    apply_design(setup.model, setup.design, setup.use_greedy_knockouts)
+    sol = me_optimize_growth(setup.model)
+
+    growth_rate = 0.0 if sol.f is None else sol.f
+    flux = None if growth_rate < min_biomass else sol.x_dict
     results = pd.Series({
         'paper': series['paper'],
-        'model': series['model'],
+        'sample': series['sample'],
+        'keffs': series['keffs'],
         'growth_rate': growth_rate,
         'flux': flux,
-        'keffs': keffs,
     })
     results.to_json(outfile)
 
