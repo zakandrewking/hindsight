@@ -4,8 +4,8 @@ sequentially knocked out.
 """
 
 from hindsight import (load_models_to_compare, get_secretion, setup_for_series,
-                       apply_design, apply_environment,
-                       me_optimize_growth, Design, SimulationSetup)
+                       apply_design, apply_environment, me_optimize_growth,
+                       Design, Environment, SimulationSetup)
 from hindsight.variables import min_biomass, SetUpModelError
 from parallel_pandas import apply_p
 from theseus import load_model
@@ -86,19 +86,13 @@ def run_secretions_for_knockouts_series(series, loaded_models=None,
 
     ignore_exchanges = ['EX_h2_e', 'EX_o2_e', 'EX_co2_e']
     try:
-        results = secretions_for_knockouts(setup,
-                                           raise_if_found=setup.design.target_exchange,
-                                           ignore_exchanges=ignore_exchanges)
+        found, data = secretions_for_knockouts(setup,
+                                                  return_if_found=setup.design.target_exchange,
+                                                  ignore_exchanges=ignore_exchanges)
         out_series = pd.Series({
             'target_exchange': setup.design.target_exchange,
-            'can_secrete': False,
-            'data': results,
-        })
-    except FoundReaction:
-        out_series = pd.Series({
-            'target_exchange': setup.design.target_exchange,
-            'can_secrete': True,
-            'data': np.nan,
+            'can_secrete': found,
+            'data': data,
         })
     except SetUpModelError as e:
         return pd.Series({
@@ -114,7 +108,7 @@ def run_secretions_for_knockouts_series(series, loaded_models=None,
     return out_series
 
 def secretions_for_knockouts(setup, knockouts=[], max_depth=10, depth=0,
-                             ignore_exchanges=[], raise_if_found=None,
+                             ignore_exchanges=[], return_if_found=None,
                              growth_cutoff=min_biomass, flux_cutoff=0.1):
     """Accepts a SimulationSetup and a set of knockouts.
 
@@ -133,16 +127,16 @@ def secretions_for_knockouts(setup, knockouts=[], max_depth=10, depth=0,
 
     ignore_exchanges: Exchanges to not knock out.
 
-    raise_if_found: A reaction ID that, if found, will raise FoundReaction exception.
+    return_if_found: A reaction ID that, if found, will raise FoundReaction exception.
 
     growth_cutoff: Below this growth rate, the simulation is considered lethal.
 
-    flux_cutoff: The minimum flux required to raise for raise_if_found.
+    flux_cutoff: The minimum flux required to raise for return_if_found.
 
     """
     # check depth
     if depth > max_depth:
-        return None
+        return False, None
 
     # always copy the model
     model = setup.model
@@ -151,50 +145,41 @@ def secretions_for_knockouts(setup, knockouts=[], max_depth=10, depth=0,
     else:
         model = model.copy()
 
-    # knock out the reactions by adding them to other_bounds
-    for ko in knockouts:
-        setup.environment.other_bounds[ko] = (0, 0)
+    # copy environment for changes, knock out the reactions by adding them to
+    # other_bounds
+    environment = Environment(setup.environment.substrate_exchanges,
+                              setup.environment.supplement_exchanges,
+                              setup.environment.aerobic,
+                              dict({ko: (0, 0) for ko in knockouts},
+                                   **setup.environment.other_bounds))
 
     # set up model. Have to do this every time because the ME model cannot be
     # copied
-    model = apply_environment(model, setup.environment)
+    model = apply_environment(model, environment)
     model = apply_design(model, setup.design, setup.use_greedy_knockouts)
 
     # solve the problem
     sol = me_optimize_growth(model) if model.id == 'ME' else model.optimize()
+
     if sol.f is None or sol.f <= growth_cutoff:
-        return None
+        return False, None
     else:
         secretion = dict(get_secretion(model, sol.x_dict, sort=False))
-        if raise_if_found is not None and raise_if_found in secretion:
-            fl = secretion[raise_if_found]
-            if fl > flux_cutoff:
-                raise FoundReaction(str(secretion))
-        return {
+        if return_if_found is not None and return_if_found in secretion and secretion[return_if_found] > flux_cutoff:
+            can_secrete = True
+            children = None
+        else:
+            children_raw = {new_knockout: secretions_for_knockouts(setup, knockouts + [new_knockout],
+                                                                   max_depth, depth + 1,
+                                                                   ignore_exchanges, return_if_found,
+                                                                   growth_cutoff, flux_cutoff)
+                            for new_knockout in secretion.iterkeys()
+                            if new_knockout not in ignore_exchanges}
+            can_secrete = any(v[0] for v in children_raw.itervalues())
+            children = {k: v[1] for k, v in children_raw.iteritems()}
+        return can_secrete, {
             'knockouts': knockouts,
             'growth_rate': sol.f,
             'secretion': secretion,
-            'children': {
-                new_knockout: secretions_for_knockouts(setup, knockouts + [new_knockout],
-                                                       max_depth, depth + 1,
-                                                       ignore_exchanges, raise_if_found,
-                                                       growth_cutoff, flux_cutoff)
-                for new_knockout in secretion.iterkeys()
-                if new_knockout not in ignore_exchanges
-            }
+            'children': children,
         }
-
-
-# def print_secretion(sec):
-#     return '[f: %.2f | %s]' % (sec.growth_rate,
-#                                ', '.join('%s: %.2f' % x for x in zip(sec.exchange_reactions, sec.fluxes)))
-
-
-# def print_tree(tree, depth=0, format_data=lambda x: str(x)):
-#     disp = ('   ' * depth)
-#     out = '--> ' + format_data(tree['data']) + '\n'
-#     for k, v in tree['children'].iteritems():
-#         if type(v) is dict:
-#             out += (disp + '|\n' + disp + ('\--%s%s' % (k, print_tree(v, depth + 1, format_data))))
-#     #out += '\n'
-#     return out

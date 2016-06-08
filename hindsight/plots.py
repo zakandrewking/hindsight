@@ -204,73 +204,66 @@ CategoryMapData = namedtuple('CategoryMapData', ['x_labels',
                                                  'categories',
                                                  'title'])
 
+def get_tree_table(sims):
+    def _load_pickle(path):
+        with open(path, 'r') as f:
+            return pickle.load(f)
+    secretion_tree_results = _load_pickle('../data/secretion_tree/secretion_tree_results.pickle')
+    secretion_tree_w_gene_kos_results = _load_pickle('../data/secretion_tree_w_gene_kos/secretion_tree_results.pickle')
+    tree_table = (sims
+                  .merge(secretion_tree_results, left_index=True, right_index=True, how='left')
+                  .merge(secretion_tree_w_gene_kos_results, left_index=True, right_index=True, how='left', suffixes=['', '_w_gene_kos'])
+                  .loc[:, ['can_secrete', 'can_secrete_w_gene_kos']])
+    return tree_table
+
 # Secretion Tree categories:
 #
-#                secretion tree:       y                    n      (all not growth coupled and not non-unique)
-# with kos: y                     insufficient            ERROR
-#           n                      detrimental       model limitation
+#                secretion tree:       y                    n             nan   (all not growth coupled and not non-unique)
+# with kos: y                     insufficient            ERROR          ERROR
+#           n                      detrimental       model limitation    ERROR
+#           nan                       ERROR               ERROR           none
 
-def _load_pickle(path):
-    with open(path, 'r') as f:
-        return pickle.load(f)
-secretion_tree_results = _load_pickle('../data/secretion_tree/secretion_tree_results.pickle')
-secretion_tree_w_gene_kos_results = _load_pickle('../data/secretion_tree_w_gene_kos/secretion_tree_results.pickle')
-
-def _category_model_limitation(sims):
+def _category_model_limitation(sims, tree_table=None):
     """This category means that the target cannot be growth-coupled with any set of
     iterative fermentation KOs."""
-    table = (sims
-             .merge(secretion_tree_results, left_index=True, right_index=True, how='left')
-             .merge(secretion_tree_w_gene_kos_results, left_index=True, right_index=True, how='left', suffixes=['', '_w_gene_kos'])
-             .loc[:, ['can_secrete', 'can_secrete_w_gene_kos']]
-    )
-    model_limitation = (
-        (~table[can_secrete].isnull()) & (~table[can_secrete_w_gene_kos].isnull()) &
-        # LEFT OFF
-    )
+    model_limitation = ((tree_table['can_secrete'] == False) &
+                        (tree_table['can_secrete_w_gene_kos'] == False))
     return 'Cannot be growth coupled in model', model_limitation
 
-def _category_insufficient_knockouts(sims):
+def _category_insufficient_knockouts(sims, tree_table=None):
     """This category means that the target can be growth-coupled with some set of
     iterative fermentation KOs starting from the designed strain KOs."""
-    with open('../data/secretion_tree_w_gene_kos/secretion_tree_results.pickle', 'r') as f:
-        results = pickle.load(f)
-    model_limitation = ~(sims.merge(results, left_index=True, right_index=True, how='left')
-                         .can_secrete
-                         .fillna(True))
-    return 'Insufficient or detrimental knockouts', model_limitation
+    insufficient = ((tree_table['can_secrete'] == True) &
+                    (tree_table['can_secrete_w_gene_ko'] == True))
+    return 'Insufficient or detrimental knockouts', insufficient
 
-def _category_detrimental_knockouts(sims):
+def _category_detrimental_knockouts(sims, tree_table=None):
     """This category means that the target cannot be growth-coupled with any set of
     iterative fermentation KOs starting from the designed strain KOs."""
-    with open('../data/secretion_tree_w_gene_kos/secretion_tree_results.pickle', 'r') as f:
-        results = pickle.load(f)
-    model_limitation = ~(sims.merge(results, left_index=True, right_index=True, how='left')
-                         .can_secrete
-                         .fillna(True))
-    return 'Insufficient or detrimental knockouts', model_limitation
+    detrimental = ((tree_table['can_secrete'] == True) &
+                   (tree_table['can_secrete_w_gene_kos'] == False))
+    return 'Insufficient or detrimental knockouts', detrimental
 
-def _category_error(sims):
-    """This category means that the target cannot be growth-coupled with any set of
-    iterative fermentation KOs starting from the designed strain KOs."""
-    with open('../data/secretion_tree_w_gene_kos/secretion_tree_results.pickle', 'r') as f:
-        results = pickle.load(f)
-    model_limitation = ~(sims.merge(results, left_index=True, right_index=True, how='left')
-                         .can_secrete
-                         .fillna(True))
-    return 'ERROR', model_limitation
+def _category_error(sims, tree_table=None):
+    """An error occurred somewhere along the way."""
+    error = (
+        ((tree_table['can_secrete'] == False) & (tree_table['can_secrete_w_gene_kos'] == True)) |
+        ( tree_table['can_secrete'].isnull() & ~tree_table['can_secrete_w_gene_kos'].isnull()) |
+        (~tree_table['can_secrete'].isnull() &  tree_table['can_secrete_w_gene_kos'].isnull())
+    )
+    return 'ERROR', error
 
-def _category_non_unique(sims, cutoff=0.15):
+def _category_non_unique(sims, cutoff=0.15, **kwargs):
     non_unique = ((sims.loc[:, 'yield_min'] < 0.8 * cutoff) &
                   (sims.loc[:, 'yield_max'] >= cutoff))
     return 'Alternative optima', non_unique
 
-def _category_lethal(sims, cutoff=min_biomass):
+def _category_lethal(sims, cutoff=min_biomass, **kwargs):
     # deal iwth nan's
     gr = (sims.loc[:, 'growth_rate'].fillna(0) < cutoff)
     return 'Lethal genotypes', gr
 
-def _category_growth_coupled(sims, cutoff=0.15, h2_cutoff=2):
+def _category_growth_coupled(sims, cutoff=0.15, h2_cutoff=2, **kwargs):
     growth_coupled = ((sims.loc[:, 'yield_min'] >= cutoff) |
                       (sims.loc[:, 'target_exchange'] == 'EX_h2_e') & (sims.loc[:, 'min'] >= h2_cutoff))
     return 'Growth coupled (>{:.0f}% C yield)*'.format(cutoff*100), growth_coupled
@@ -279,8 +272,8 @@ def _category_growth_coupled(sims, cutoff=0.15, h2_cutoff=2):
 _category_fns = [
     # _category_parameterization,
     _category_error,
-    _category_insufficient_knockouts,
-    _category_detrimental_knockouts,
+    # _category_insufficient_knockouts,
+    # _category_detrimental_knockouts,
     _category_model_limitation, # TODO make sure none of these overlap with
                                 # insufficient_knockouts
     _category_non_unique, # could also be insufficient knockouts
@@ -291,11 +284,12 @@ _none_category_name = 'Uncategorized'
 
 def calculate_category_map(df, sort='year', title='Failure model categories',
                            models=models_to_compare):
+
     # fill in an empty row
     categories = pd.DataFrame({'category': _none_category_name}, index=df.index)
     # apply the functions
     for category_fn in _category_fns:
-        name, result = category_fn(df)
+        name, result = category_fn(df, tree_table=get_tree_table(df))
         categories[result] = name
     categories = (categories
                   .reset_index()
@@ -385,7 +379,7 @@ def calculate_model_growth_coupled_categories(sims, target='all',
     # apply the functions
     cats = [] # keep track of category order
     for category_fn in _category_fns:
-        name, result = category_fn(sims)
+        name, result = category_fn(sims, tree_table=get_tree_table(sims))
         categories_df[result] = name
         cats.append(name)
     cats.reverse()
