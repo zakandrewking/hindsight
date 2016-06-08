@@ -126,12 +126,13 @@ def apply_environment(model, environment):
                     new_bounds[me_r_id] = (0, bs[1])
         other_bounds = new_bounds
 
-    for r_id, bs in environment.other_bounds.items():
+    for r_id, bs in environment.other_bounds.iteritems():
         try:
             reaction = model.reactions.get_by_id(r_id)
         except KeyError:
-            SetUpModelError('Other bound reaction not found: %s' % r_id)
-        reaction.lower_bound, reaction.upper_bound = bs
+            print('Other bound reaction not found: %s' % r_id)
+        else:
+            reaction.lower_bound, reaction.upper_bound = bs
     return model
 
 def apply_design(model, design, use_greedy_knockouts,
@@ -381,8 +382,8 @@ def run_simulation(series, loaded_models=None, use_greedy_knockouts=True):
     # update the model
     try:
         # set up
-        apply_environment(setup.model, setup.environment)
         apply_design(setup.model, setup.design, setup.use_greedy_knockouts)
+        apply_environment(setup.model, setup.environment)
         # run minimize_maximize
         min_max_solution = minimize_maximize(setup)
         # run theoretical yield

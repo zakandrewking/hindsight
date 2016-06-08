@@ -87,8 +87,8 @@ def run_secretions_for_knockouts_series(series, loaded_models=None,
     ignore_exchanges = ['EX_h2_e', 'EX_o2_e', 'EX_co2_e']
     try:
         found, data = secretions_for_knockouts(setup,
-                                                  return_if_found=setup.design.target_exchange,
-                                                  ignore_exchanges=ignore_exchanges)
+                                               return_if_found=setup.design.target_exchange,
+                                               ignore_exchanges=ignore_exchanges)
         out_series = pd.Series({
             'target_exchange': setup.design.target_exchange,
             'can_secrete': found,
@@ -155,8 +155,8 @@ def secretions_for_knockouts(setup, knockouts=[], max_depth=10, depth=0,
 
     # set up model. Have to do this every time because the ME model cannot be
     # copied
-    model = apply_environment(model, environment)
     model = apply_design(model, setup.design, setup.use_greedy_knockouts)
+    model = apply_environment(model, environment)
 
     # solve the problem
     sol = me_optimize_growth(model) if model.id == 'ME' else model.optimize()

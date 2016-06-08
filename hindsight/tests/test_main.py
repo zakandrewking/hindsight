@@ -26,8 +26,8 @@ def test_minimize_maximize():
 
 def test_minimize_maximize_me(me_model):
     sim_setup = SimulationSetup(me_model, ex_environment, ex_design, True)
-    me_model = apply_environment(me_model, ex_environment)
     me_model = apply_design(me_model, ex_design, True)
+    me_model = apply_environment(me_model, ex_environment)
     out = minimize_maximize(sim_setup)
     assert_almost_equal(out.growth_rate, 0.92, decimal=2)
     assert_almost_equal(out.minmax[0], 0.53, decimal=2)
@@ -38,8 +38,8 @@ def test_minimize_maximize_me(me_model):
 
 def test_get_absolute_max(me_model):
     sim_setup = SimulationSetup(me_model, ex_environment, ex_design, True)
-    me_model = apply_environment(me_model, ex_environment)
     me_model = apply_design(me_model, ex_design, True)
+    me_model = apply_environment(me_model, ex_environment)
     abs_max, heterologous = get_absolute_max(sim_setup)
     assert abs_max > 5
     assert np.isnan(heterologous)

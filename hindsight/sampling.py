@@ -68,9 +68,9 @@ def sample_series(series, data_directory):
     _set_reaction_keffs(setup.model, series['keffs'])
 
     # run
-    apply_environment(setup.model, setup.environment)
     apply_design(setup.model, setup.design, setup.use_greedy_knockouts,
                  recompile_expressions=False)
+    apply_environment(setup.model, setup.environment)
 
     print('Compiling expressions')
     setup.model.expressions = compile_expressions(setup.model)
