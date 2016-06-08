@@ -134,17 +134,31 @@ def apply_environment(model, environment):
         reaction.lower_bound, reaction.upper_bound = bs
     return model
 
-def apply_design(model, design, use_greedy_knockouts):
-    """Modify the model to match the design."""
+def apply_design(model, design, use_greedy_knockouts,
+                 recompile_expressions=True):
+    """Modify the model to match the design.
+
+    model:
+
+    design:
+
+    use_greedy_knockouts:
+
+    recompile_expressions: If True, then recompile_expressions when new ME
+    reactions are added.
+
+    """
     # add non-native pathway
     if design.heterologous_pathway is not None:
         try:
-            model = add_heterologous_pathway(model, design.heterologous_pathway)
+            model = add_heterologous_pathway(model, design.heterologous_pathway,
+                                             recompile_expressions=recompile_expressions)
         except NotFoundError:
             raise SetUpModelError('bad addition: %s' % design.heterologous_pathway)
     # add fhl for hydrogen production
     if design.target_exchange == 'H2':
-        model = add_heterologous_pathway(model, 'fhl')
+        model = add_heterologous_pathway(model, 'fhl',
+                                         recompile_expressions=recompile_expressions)
     reaction_kos, _ = get_reaction_knockouts(model, design, use_greedy_knockouts)
     # perform knockouts
     for r in reaction_kos:

@@ -929,7 +929,14 @@ def get_me_designs():
         ],
     }
 
-def add_heterologous_pathway(model, additions, ignore_repeats=False, copy=False):
+def add_heterologous_pathway(model, additions, ignore_repeats=False, copy=False,
+                             recompile_expressions=False):
+    """Add the given heterologous pathway.
+
+    recompile_expressions: If True, then recompile_expressions when new ME
+    reactions are added.
+
+    """
     if copy:
         model = model.copy()
 
@@ -944,25 +951,30 @@ def add_heterologous_pathway(model, additions, ignore_repeats=False, copy=False)
             model = add_pathway(model, *core_designs[additions],
                                 check_mass_balance=True,
                                 check_charge_balance=False,
-                                ignore_repeats=ignore_repeats)
+                                ignore_repeats=ignore_repeats,
+                                recompile_expressions=recompile_expressions)
         elif model.id == 'iJR904' and (additions in iJR904_designs):
             model = add_pathway(model, *iJR904_designs[additions],
                                 check_mass_balance=True,
                                 check_charge_balance=False,
-                                ignore_repeats=ignore_repeats)
+                                ignore_repeats=ignore_repeats,
+                                recompile_expressions=recompile_expressions)
         elif 'iAF1260' in model.id and (additions in iAF1260_designs):
             model = add_pathway(model, *iAF1260_designs[additions],
                                 check_mass_balance=True,
                                 check_charge_balance=False,
-                                ignore_repeats=ignore_repeats)
+                                ignore_repeats=ignore_repeats,
+                                recompile_expressions=recompile_expressions)
         elif model.id == 'ME' and (additions in me_designs):
             return add_pathway(model, *me_designs[additions],
                                check_mass_balance=True,
                                check_charge_balance=False,
-                               ignore_repeats=ignore_repeats)
+                               ignore_repeats=ignore_repeats,
+                               recompile_expressions=recompile_expressions)
         return add_pathway(model, *designs[additions], check_mass_balance=True,
                            check_charge_balance=False,
-                           ignore_repeats=ignore_repeats)
+                           ignore_repeats=ignore_repeats,
+                           recompile_expressions=recompile_expressions)
     elif additions == 'none':
         return model
     else: # make sure we don't miss any

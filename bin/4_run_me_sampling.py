@@ -20,7 +20,7 @@ except OSError:
 
 # make 500 sims for each ME simulation
 df_me = df.loc[idx[:, 'ME'], :].reset_index(level='model')
-df_samples = generate_sampling_problems(df_me, 500)
+df_samples = generate_sampling_problems(df_me, 300)
 
 # run parallel
-apply_slurm(df_samples, 'hindsight', 'sample_series', directory)
+apply_slurm(df_samples.loc[idx['Jantama2008-xv', :], ], 'hindsight', 'sample_series', directory)

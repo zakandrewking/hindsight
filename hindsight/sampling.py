@@ -4,15 +4,57 @@ from hindsight import (setup_for_series, apply_design, apply_environment,
                        me_optimize_growth)
 from hindsight.variables import min_biomass
 
+from minime.solve.symbolic import compile_expressions
+from minime.core.MEReactions import MetabolicReaction
 import pandas as pd
 import numpy as np
 import json
 from os.path import join
 import random
 import logging
+import time
+
+def _set_reaction_keffs(me, keffs):
+    for met_rxn in me.reactions:
+        # skip spontaneous reactions
+        if getattr(met_rxn, 'complex_data', None) is None:
+            continue
+        if isinstance(met_rxn, MetabolicReaction) and met_rxn.complex_data.id != 'CPLX_dummy':
+            key = (
+                met_rxn.id
+                .replace('-', '_DASH_')
+                .replace('__', '_DASH_')
+                .replace(':', '_COLON_')
+                # specific patches for PGK, TPI ids
+                .replace('TPI_DASH_CPLX', 'TPI')
+                .replace('PGK_DASH_CPLX', 'PGK')
+            )
+            # key = met_rxn.id
+            key = 'keff_' + key.replace('_FWD_', '_').replace('_REV_', '_')
+
+            matches = [i for i in keffs if key in i]
+            # get the direction
+            if met_rxn.reverse:
+                matches = [i for i in matches if i.endswith('_reverse_priming_keff')]
+            else:
+                matches = [i for i in matches if i.endswith('_forward_priming_keff')]
+            if len(matches) == 1:
+                met_rxn.keff = keffs[matches[0]]
+                met_rxn.update()
+            elif len(matches) > 0:
+                if len(matches) == len([i for i in matches if key + '_mod_']):
+                    met_rxn.keff = keffs[matches[0]]
+                    met_rxn.update()
+                else:
+                    logging.debug(key, len(matches))
+            else: # len(matches) == 0
+                logging.debug('no keff found for ' + key)
 
 def sample_series(series, data_directory):
+    start = time.time()
+
     outfile = join(data_directory, '%s_%d_output.json' % (series['paper'], series['sample']))
+    print('Starting with results file %s' % outfile)
 
     # load models
     if series['model'] != 'ME':
@@ -21,21 +63,33 @@ def sample_series(series, data_directory):
     # set up (setup_for_series already loads the ME model again)
     setup = setup_for_series(series, {'ME': 'placeholder'}, True)
 
+    # set keffs
+    print('Setting keffs')
+    _set_reaction_keffs(setup.model, series['keffs'])
+
     # run
     apply_environment(setup.model, setup.environment)
-    apply_design(setup.model, setup.design, setup.use_greedy_knockouts)
+    apply_design(setup.model, setup.design, setup.use_greedy_knockouts,
+                 recompile_expressions=False)
+
+    print('Compiling expressions')
+    setup.model.expressions = compile_expressions(setup.model)
+    print('Solving')
     sol = me_optimize_growth(setup.model)
 
+    print('Saving output')
     growth_rate = 0.0 if sol.f is None else sol.f
-    flux = None if growth_rate < min_biomass else sol.x_dict
+    metabolic_flux = None if growth_rate < min_biomass else setup.model.get_metabolic_flux(solution=sol)
     results = pd.Series({
         'paper': series['paper'],
         'sample': series['sample'],
         'keffs': series['keffs'],
         'growth_rate': growth_rate,
-        'flux': flux,
+        'metabolic_flux': metabolic_flux,
     })
     results.to_json(outfile)
+
+    print('Finished in %.1f seconds' % (time.time() - start))
 
 def generate_sampling_problems(df, number_samples, random_seed=None,
                                distribution='lognormal', center_for_mu=True,
