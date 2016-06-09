@@ -49,12 +49,13 @@ def run_secretions_for_knockouts_dataframe(df, outdir, threads,
     loaded_models = load_models_to_compare(m_only=True)
     if debug:
         res = []
-        df_run = df.loc[idx[: , ['ME']], :]
+        df_run = df.loc[idx[:, loaded_models.keys()], :]
         for index, row in df_run.reset_index().iterrows():
             res.append(run_secretions_for_knockouts_series(row,
                                                            loaded_models=loaded_models,
                                                            with_gene_kos=with_gene_kos,
                                                            outdir=outdir))
+        print('collecting')
         out_df = pd.DataFrame(res).set_index(df.index.names)
     else:
         out_df = apply_p(df.loc[idx[:, loaded_models.keys()], :],
@@ -62,6 +63,7 @@ def run_secretions_for_knockouts_dataframe(df, outdir, threads,
                          loaded_models=loaded_models, outdir=outdir,
                          with_gene_kos=with_gene_kos,
                          threads=threads)
+    print('saving with outdir %s' % outdir)
     out_df.to_pickle(join(outdir, 'secretion_tree_results.pickle'))
 
 def run_secretions_for_knockouts_series(series, loaded_models=None,
@@ -86,18 +88,23 @@ def run_secretions_for_knockouts_series(series, loaded_models=None,
 
     ignore_exchanges = ['EX_h2_e', 'EX_o2_e', 'EX_co2_e']
     try:
-        found, data = secretions_for_knockouts(setup,
-                                               return_if_found=setup.design.target_exchange,
-                                               ignore_exchanges=ignore_exchanges)
+        _, data = secretions_for_knockouts(setup, raise_if_found=setup.design.target_exchange,
+                                           ignore_exchanges=ignore_exchanges)
         out_series = pd.Series({
             'target_exchange': setup.design.target_exchange,
-            'can_secrete': found,
+            'can_secrete': False,
             'data': data,
         })
+    except FoundReaction as e:
+        out_series = pd.Series({
+            'target_exchange': setup.design.target_exchange,
+            'can_secrete': True,
+            'data': e,
+        })
     except SetUpModelError as e:
-        return pd.Series({
-            'paper': series['paper'],
-            'model': series['model'],
+        out_series = pd.Series({
+            'target_exchange': setup.design.target_exchange,
+            'can_secrete': np.nan,
             'error': e,
         })
 
@@ -107,9 +114,10 @@ def run_secretions_for_knockouts_series(series, loaded_models=None,
     out_series.to_json(outfile)
     return out_series
 
-def secretions_for_knockouts(setup, knockouts=[], max_depth=10, depth=0,
+def secretions_for_knockouts(setup, knockouts=[], max_depth=1000, depth=0,
                              ignore_exchanges=[], return_if_found=None,
-                             growth_cutoff=min_biomass, flux_cutoff=0.1):
+                             raise_if_found=None, growth_cutoff=min_biomass,
+                             flux_cutoff=0.1):
     """Accepts a SimulationSetup and a set of knockouts.
 
     Returns a tree of secretions using nested dictionaries.
@@ -127,7 +135,10 @@ def secretions_for_knockouts(setup, knockouts=[], max_depth=10, depth=0,
 
     ignore_exchanges: Exchanges to not knock out.
 
-    return_if_found: A reaction ID that, if found, will raise FoundReaction exception.
+    raise_if_found: A reaction ID that, if found, will raise FoundReaction exception.
+
+    return_if_found: A reaction ID that, if found, will return True as the first
+    return value.
 
     growth_cutoff: Below this growth rate, the simulation is considered lethal.
 
@@ -136,7 +147,10 @@ def secretions_for_knockouts(setup, knockouts=[], max_depth=10, depth=0,
     """
     # check depth
     if depth > max_depth:
-        return False, None
+        print('Max depth')
+        return False, 'MAX_DEPTH'
+    if depth >= 20 and depth % 10 == 0:
+        print(depth)
 
     # always copy the model
     model = setup.model
@@ -165,16 +179,23 @@ def secretions_for_knockouts(setup, knockouts=[], max_depth=10, depth=0,
         return False, None
     else:
         secretion = dict(get_secretion(model, sol.x_dict, sort=False))
-        if return_if_found is not None and return_if_found in secretion and secretion[return_if_found] > flux_cutoff:
+        if raise_if_found is not None and raise_if_found in secretion and secretion[raise_if_found] > flux_cutoff:
+            raise FoundReaction(str(secretion))
+        elif return_if_found is not None and return_if_found in secretion and secretion[return_if_found] > flux_cutoff:
             can_secrete = True
             children = None
         else:
-            children_raw = {new_knockout: secretions_for_knockouts(setup, knockouts + [new_knockout],
-                                                                   max_depth, depth + 1,
-                                                                   ignore_exchanges, return_if_found,
-                                                                   growth_cutoff, flux_cutoff)
-                            for new_knockout in secretion.iterkeys()
-                            if new_knockout not in ignore_exchanges}
+            children_raw = {new_knockout: secretions_for_knockouts(setup,
+                                                                   knockouts=knockouts + [new_knockout],
+                                                                   max_depth=max_depth,
+                                                                   depth=depth + 1,
+                                                                   ignore_exchanges=ignore_exchanges,
+                                                                   return_if_found=return_if_found,
+                                                                   raise_if_found=raise_if_found,
+                                                                   growth_cutoff=growth_cutoff,
+                                                                   flux_cutoff=flux_cutoff)
+                            for new_knockout, flux in secretion.iteritems()
+                            if new_knockout not in ignore_exchanges and flux > flux_cutoff}
             can_secrete = any(v[0] for v in children_raw.itervalues())
             children = {k: v[1] for k, v in children_raw.iteritems()}
         return can_secrete, {

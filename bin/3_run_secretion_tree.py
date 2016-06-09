@@ -15,5 +15,5 @@ for d in tree_dir, tree_w_kos_dir:
         makedirs(d)
     except OSError:
         pass
-run_secretions_for_knockouts_dataframe(df, tree_dir, 18, with_gene_kos=False)
-run_secretions_for_knockouts_dataframe(df, tree_w_kos_dir, 18, with_gene_kos=True)
+run_secretions_for_knockouts_dataframe(df, tree_dir, 20, with_gene_kos=False)
+run_secretions_for_knockouts_dataframe(df, tree_w_kos_dir, 20, with_gene_kos=True)

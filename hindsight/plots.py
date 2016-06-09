@@ -264,8 +264,10 @@ def _category_lethal(sims, cutoff=min_biomass, **kwargs):
     return 'Lethal genotypes', gr
 
 def _category_growth_coupled(sims, cutoff=0.15, h2_cutoff=2, **kwargs):
-    growth_coupled = ((sims.loc[:, 'yield_min'] >= cutoff) |
-                      (sims.loc[:, 'target_exchange'] == 'EX_h2_e') & (sims.loc[:, 'min'] >= h2_cutoff))
+    growth_coupled = (
+        (sims.loc[:, 'yield_min'] >= cutoff) |
+        ((sims.loc[:, 'target_exchange'] == 'EX_h2_e') & (sims.loc[:, 'min'] >= h2_cutoff))
+    )
     return 'Growth coupled (>{:.0f}% C yield)*'.format(cutoff*100), growth_coupled
 
 # low to high priority

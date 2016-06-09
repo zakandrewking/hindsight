@@ -112,9 +112,12 @@ def apply_environment(model, environment):
                         aerobic=environment.aerobic, sur=sur,
                         max_our=this_max_our)
 
+    # explicit other_bounds override supplement_exchanges
     other_bounds = environment.other_bounds
     for supp in environment.supplement_exchanges:
-        other_bounds[supp] = (-supplement_uptake, 1000)
+        if supp not in other_bounds:
+            other_bounds[supp] = (-supplement_uptake, 1000)
+
     # deal with me reactions
     if model.id == 'ME':
         new_bounds = {}
