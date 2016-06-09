@@ -4,6 +4,7 @@ from hindsight import models_to_compare
 from hindsight.variables import min_biomass
 
 import pandas as pd
+idx = pd.IndexSlice
 import numpy as np
 from collections import namedtuple
 import cPickle as pickle
@@ -223,26 +224,30 @@ def get_tree_table(sims):
 #           n                      detrimental       model limitation    ERROR
 #           nan                       ERROR               ERROR           none
 
+def _ijo_to_me(ser):
+    ser.loc[idx[:, 'ME']] = ser.loc[idx[:, 'iJO1366']].values
+    return ser
+
 def _category_model_limitation(sims, tree_table=None):
     """This category means that the target cannot be growth-coupled with any set of
     iterative fermentation KOs."""
     model_limitation = ((tree_table['can_secrete'] == False) &
                         (tree_table['can_secrete_w_gene_kos'] == False))
-    return 'Cannot be growth coupled in model', model_limitation
+    return 'Cannot be growth coupled in model', _ijo_to_me(model_limitation)
 
 def _category_insufficient_knockouts(sims, tree_table=None):
     """This category means that the target can be growth-coupled with some set of
     iterative fermentation KOs starting from the designed strain KOs."""
     insufficient = ((tree_table['can_secrete'] == True) &
-                    (tree_table['can_secrete_w_gene_ko'] == True))
-    return 'Insufficient or detrimental knockouts', insufficient
+                    (tree_table['can_secrete_w_gene_kos'] == True))
+    return 'Insufficient knockouts', _ijo_to_me(insufficient)
 
 def _category_detrimental_knockouts(sims, tree_table=None):
     """This category means that the target cannot be growth-coupled with any set of
     iterative fermentation KOs starting from the designed strain KOs."""
     detrimental = ((tree_table['can_secrete'] == True) &
                    (tree_table['can_secrete_w_gene_kos'] == False))
-    return 'Insufficient or detrimental knockouts', detrimental
+    return 'Detrimental knockouts', _ijo_to_me(detrimental)
 
 def _category_error(sims, tree_table=None):
     """An error occurred somewhere along the way."""
@@ -252,6 +257,9 @@ def _category_error(sims, tree_table=None):
         (~tree_table['can_secrete'].isnull() &  tree_table['can_secrete_w_gene_kos'].isnull())
     )
     return 'ERROR', error
+
+def _category_parameterization(sims, **kwargs):
+    return 'ME parameterization', sims.yield_min == 10000
 
 def _category_non_unique(sims, cutoff=0.15, **kwargs):
     non_unique = ((sims.loc[:, 'yield_min'] < 0.8 * cutoff) &
@@ -272,12 +280,12 @@ def _category_growth_coupled(sims, cutoff=0.15, h2_cutoff=2, **kwargs):
 
 # low to high priority
 _category_fns = [
-    # _category_parameterization,
-    _category_error,
-    # _category_insufficient_knockouts,
-    # _category_detrimental_knockouts,
+    # _category_error,
+    _category_insufficient_knockouts,
+    _category_detrimental_knockouts,
     _category_model_limitation, # TODO make sure none of these overlap with
                                 # insufficient_knockouts
+    _category_parameterization,
     _category_non_unique, # could also be insufficient knockouts
     _category_lethal, # could also be isozymes
     _category_growth_coupled, # highest priority
@@ -385,8 +393,13 @@ def calculate_model_growth_coupled_categories(sims, target='all',
         categories_df[result] = name
         cats.append(name)
     cats.reverse()
-    if _none_category_name in list(categories_df.loc[:, 'category']):
-        cats.append(_none_category_name)
+
+    # Comment out to ignore Uncategorized:
+    show_none_category = False
+    if show_none_category:
+        if _none_category_name in list(categories_df.loc[:, 'category']):
+            cats.append(_none_category_name)
+
     # list of ordered categories
     if not category_list:
         category_list = cats

@@ -86,7 +86,7 @@ def run_secretions_for_knockouts_series(series, loaded_models=None,
             setup.use_greedy_knockouts
         )
 
-    ignore_exchanges = ['EX_h2_e', 'EX_o2_e', 'EX_co2_e']
+    ignore_exchanges = ['EX_h2_e', 'EX_o2_e']
     try:
         _, data = secretions_for_knockouts(setup, raise_if_found=setup.design.target_exchange,
                                            ignore_exchanges=ignore_exchanges)
@@ -117,7 +117,7 @@ def run_secretions_for_knockouts_series(series, loaded_models=None,
 def secretions_for_knockouts(setup, knockouts=[], max_depth=1000, depth=0,
                              ignore_exchanges=[], return_if_found=None,
                              raise_if_found=None, growth_cutoff=min_biomass,
-                             flux_cutoff=0.1):
+                             flux_cutoff=1.0):
     """Accepts a SimulationSetup and a set of knockouts.
 
     Returns a tree of secretions using nested dictionaries.
