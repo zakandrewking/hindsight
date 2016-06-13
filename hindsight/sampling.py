@@ -158,6 +158,9 @@ def generate_sampling_problems(df, number_samples, random_seed=None,
     else:
         raise Exception('Bad distribution %s. Must be lognormal or uniform' % distribution)
 
+    # add original keffs at 0 position
+    samples = [keffs_start] + samples
+
     # make a new DataFrame with the combined MultiIndex
     samples_df = pd.DataFrame([samples for _ in df.iterrows()], index=df.index)
     samples_df.columns.name = 'sample'
