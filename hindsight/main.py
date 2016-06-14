@@ -206,6 +206,20 @@ def get_absolute_max(sim_setup, copy=False):
 
     return absolute_max_product, additions_pathway_flux
 
+def carbon_yield(model, target_exchange, substrate_exchanges,
+                    supplement_exchanges, x_dict):
+    """Calculates the carbon yield"""
+    if not x_dict:
+        return None
+    # get target carbons
+    carbons = carbons_for_exchange_reaction(model.reactions.get_by_id(target_exchange))
+    # loop through targets and add carbons
+    def c_yield(sub):
+        c = carbons_for_exchange_reaction(model.reactions.get_by_id(sub))
+        return c * -x_dict.get(sub, 0.0)
+    substrate_carbon_uptake = sum(c_yield(sub) for sub in substrate_exchanges + supplement_exchanges)
+    return x_dict.get(target_exchange, 0.0) * carbons / substrate_carbon_uptake
+
 def minimize_maximize(sim_setup, biomass_fraction=0.9999,
                       calculate_yield=True, copy=False):
     """Run FVA at max growth rate. Uses pFBA for max fluxes.
@@ -233,6 +247,7 @@ def minimize_maximize(sim_setup, biomass_fraction=0.9999,
             minmax = (max_target, max_target)
             max_secretion = get_secretion(model, sol.x_dict)
             max_flux = model.get_metabolic_flux()
+            min_flux = model.get_metabolic_flux()
         else:
             # set the minimum biomass production
             biomass_reaction.lower_bound = biomass_fraction * growth_rate
@@ -244,15 +259,10 @@ def minimize_maximize(sim_setup, biomass_fraction=0.9999,
             # get secretions
             max_secretion = get_secretion(model, max_sol.x_dict)
             max_flux = max_sol.x_dict
+            min_flux = min_sol.x_dict
         if calculate_yield:
-            # get target carbons
-            carbons = carbons_for_exchange_reaction(model.reactions.get_by_id(target_exchange))
-            # loop through targets and add carbons
-            def c_yield(sub):
-                c = carbons_for_exchange_reaction(model.reactions.get_by_id(sub))
-                return c * -max_flux[sub]
-            substrate_carbon_uptake = sum(c_yield(sub) for sub in substrate_exchanges + supplement_exchanges)
-            yield_minmax = tuple([x * carbons / substrate_carbon_uptake for x in minmax])
+            yield_minmax = tuple([carbon_yield(model, target_exchange, substrate_exchanges, supplement_exchanges, x_dict)
+                                  for x_dict in (max_flux, min_flux)])
         else:
             yield_minmax = (np.nan, np.nan)
 

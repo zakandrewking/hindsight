@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 
 from hindsight import models_to_compare
-from hindsight.variables import min_biomass
+from hindsight.variables import (min_biomass, growth_coupled_cutoff,
+                                 growth_coupled_h2_cutoff)
 
 import pandas as pd
 idx = pd.IndexSlice
@@ -217,6 +218,13 @@ def get_tree_table(sims):
                   .loc[:, ['can_secrete', 'can_secrete_w_gene_kos']])
     return tree_table
 
+def get_sampling_table(sims):
+    """Get the metabolic flux of the target exchange."""
+    samp = pd.read_pickle('../data/sampling_table.pickle')
+    return (sims
+            .merge(samp, how='left', left_index=True, right_index=True)
+            .loc[:, ['target_exchange_fluxes', 'target_exchange']])
+
 # Secretion Tree categories:
 #
 #                secretion tree:       y                    n             nan   (all not growth coupled and not non-unique)
@@ -228,28 +236,28 @@ def _ijo_to_me(ser):
     ser.loc[idx[:, 'ME']] = ser.loc[idx[:, 'iJO1366']].values
     return ser
 
-def _category_model_limitation(sims, tree_table=None):
+def _category_model_limitation(sims, tree_table=None, **kwargs):
     """This category means that the target cannot be growth-coupled with any set of
     iterative fermentation KOs."""
     model_limitation = ((tree_table['can_secrete'] == False) &
                         (tree_table['can_secrete_w_gene_kos'] == False))
-    return 'Cannot be growth coupled in model', _ijo_to_me(model_limitation)
+    return 'Target byproduct cannot be growth coupled in the model (after exhaustive search)', _ijo_to_me(model_limitation)
 
-def _category_insufficient_knockouts(sims, tree_table=None):
+def _category_insufficient_knockouts(sims, tree_table=None, **kwargs):
     """This category means that the target can be growth-coupled with some set of
     iterative fermentation KOs starting from the designed strain KOs."""
     insufficient = ((tree_table['can_secrete'] == True) &
                     (tree_table['can_secrete_w_gene_kos'] == True))
-    return 'Insufficient knockouts', _ijo_to_me(insufficient)
+    return 'Experimental KO(s) insufficient for in silico growth coupling', _ijo_to_me(insufficient)
 
-def _category_detrimental_knockouts(sims, tree_table=None):
+def _category_detrimental_knockouts(sims, tree_table=None, **kwargs):
     """This category means that the target cannot be growth-coupled with any set of
     iterative fermentation KOs starting from the designed strain KOs."""
     detrimental = ((tree_table['can_secrete'] == True) &
                    (tree_table['can_secrete_w_gene_kos'] == False))
-    return 'Detrimental knockouts', _ijo_to_me(detrimental)
+    return 'Experimental KO(s) prohibit in silico growth coupling', _ijo_to_me(detrimental)
 
-def _category_error(sims, tree_table=None):
+def _category_error(sims, tree_table=None, **kwargs):
     """An error occurred somewhere along the way."""
     error = (
         ((tree_table['can_secrete'] == False) & (tree_table['can_secrete_w_gene_kos'] == True)) |
@@ -258,25 +266,40 @@ def _category_error(sims, tree_table=None):
     )
     return 'ERROR', error
 
-def _category_parameterization(sims, **kwargs):
-    return 'ME parameterization', sims.yield_min == 10000
+def _category_me_uncategorized(sims, **kwargs):
+    return 'Uncategorized ME simulations', sims.index.map(lambda x: x[1] == 'ME')
+
+def _category_parameterization(sims, sampling_table=None, **kwargs):
+    def any_g_coupled(ser):
+        l = ser['target_exchange_fluxes']
+        if type(l) is float and np.isnan(l):
+            return False
+        else:
+            return any((d['growth_rate'] >= min_biomass and
+                        (d['exchange_yield'] > growth_coupled_cutoff or
+                         (ser['target_exchange'] == 'EX_h2_e' and d['exchange_flux'] > growth_coupled_h2_cutoff)))
+                       for d in l)
+    return (
+        'With some parameter sets, target byproduct is growth coupled (>{:.0f}% C yield)*'.format(growth_coupled_cutoff * 100),
+        sampling_table.apply(any_g_coupled, axis=1)
+    )
 
 def _category_non_unique(sims, cutoff=0.15, **kwargs):
     non_unique = ((sims.loc[:, 'yield_min'] < 0.8 * cutoff) &
                   (sims.loc[:, 'yield_max'] >= cutoff))
-    return 'Alternative optima', non_unique
+    return 'Alternative optimal growth coupled solutions', non_unique
 
 def _category_lethal(sims, cutoff=min_biomass, **kwargs):
     # deal iwth nan's
     gr = (sims.loc[:, 'growth_rate'].fillna(0) < cutoff)
-    return 'Lethal genotypes', gr
+    return 'Experimental KO(s) are lethal in silico ', gr
 
-def _category_growth_coupled(sims, cutoff=0.15, h2_cutoff=2, **kwargs):
+def _category_growth_coupled(sims, **kwargs):
     growth_coupled = (
-        (sims.loc[:, 'yield_min'] >= cutoff) |
-        ((sims.loc[:, 'target_exchange'] == 'EX_h2_e') & (sims.loc[:, 'min'] >= h2_cutoff))
+        (sims.loc[:, 'yield_min'] >= growth_coupled_cutoff) |
+        ((sims.loc[:, 'target_exchange'] == 'EX_h2_e') & (sims.loc[:, 'min'] >= growth_coupled_h2_cutoff))
     )
-    return 'Growth coupled (>{:.0f}% C yield)*'.format(cutoff*100), growth_coupled
+    return 'Target byproduct is growth coupled (>{:.0f}% C yield)*'.format(growth_coupled_cutoff * 100), growth_coupled
 
 # low to high priority
 _category_fns = [
@@ -285,9 +308,10 @@ _category_fns = [
     _category_detrimental_knockouts,
     _category_model_limitation, # TODO make sure none of these overlap with
                                 # insufficient_knockouts
-    _category_parameterization,
+    _category_me_uncategorized,
     _category_non_unique, # could also be insufficient knockouts
     _category_lethal, # could also be isozymes
+    _category_parameterization,
     _category_growth_coupled, # highest priority
 ]
 _none_category_name = 'Uncategorized'
@@ -298,8 +322,11 @@ def calculate_category_map(df, sort='year', title='Failure model categories',
     # fill in an empty row
     categories = pd.DataFrame({'category': _none_category_name}, index=df.index)
     # apply the functions
+    tree_table = get_tree_table(df)
+    sampling_table = get_sampling_table(df)
     for category_fn in _category_fns:
-        name, result = category_fn(df, tree_table=get_tree_table(df))
+        name, result = category_fn(df, tree_table=tree_table,
+                                   sampling_table=sampling_table)
         categories[result] = name
     categories = (categories
                   .reset_index()
@@ -313,7 +340,8 @@ def calculate_category_map(df, sort='year', title='Failure model categories',
 
 def _category_colors(unique_categories):
     palette = sns.color_palette('Paired', len(unique_categories) + 1, desat=0.9)
-    palette = palette[3:4] + palette[:2] + palette[4:-1] + palette[-1:]+ palette[2:3]
+    #         greens             blues         dark orange      purple          red           pink
+    palette = palette[3:1:-1] + palette[:2] + palette[-2:-1] + palette[-1:] + palette[5:6] + palette[4:5]
 
     cmap = (mpl
             .colors
@@ -387,9 +415,12 @@ def calculate_model_growth_coupled_categories(sims, target='all',
     # fill in an empty row
     categories_df = pd.DataFrame({'category': _none_category_name}, index=sims.index)
     # apply the functions
+    tree_table = get_tree_table(sims)
+    sampling_table = get_sampling_table(sims)
     cats = [] # keep track of category order
     for category_fn in _category_fns:
-        name, result = category_fn(sims, tree_table=get_tree_table(sims))
+        name, result = category_fn(sims, tree_table=tree_table,
+                                   sampling_table=sampling_table)
         categories_df[result] = name
         cats.append(name)
     cats.reverse()
@@ -422,18 +453,29 @@ def calculate_model_growth_coupled_categories(sims, target='all',
     return ModelGrowthCoupledCategories(models, count_arrays, target, categories,
                                         design_total)
 
+def rename_models(model_list, year=True):
+    repl = {
+        'e_coli_core': 'Core model\n(2006)' if year else 'Core model',
+        'iJR904': 'iJR904\n(2003)' if year else 'iJR904',
+        'iAF1260': 'iAF1260\n(2007)' if year else 'iAF1260',
+        'iAF1260b': 'iAF1260b\n(2010)' if year else 'iAF1260b',
+        'iJO1366': 'iJO1366\n(2011)' if year else 'iJO1366',
+        'ME': 'iOL1650-ME\n(2013)' if year else 'iOL1650-ME',
+    }
+    return [repl[x] if x in repl else x for x in model_list]
 
 def plot_model_growth_coupled_categories(model_growth_coupled_categories,
                                          axis=None, show_legend=True,
                                          gc_line=False, y_lim_max_label=False):
     if axis is None:
-        _, axis = plt.subplots()
+        _, axis = plt.subplots(figsize=(9, 5))
 
     palette, _, _, _ = _category_colors(model_growth_coupled_categories.categories)
 
     model_range = range(len(model_growth_coupled_categories.models))
     bottom = np.zeros(len(model_growth_coupled_categories.models))
     all_handles = []; all_labels = []
+    level_0 = None
     for i, (category, level, color) in enumerate(zip(model_growth_coupled_categories.categories,
                                                      model_growth_coupled_categories.count_arrays,
                                                      palette)):
@@ -446,6 +488,11 @@ def plot_model_growth_coupled_categories(model_growth_coupled_categories,
         if i == 0 and gc_line:
             axis.plot([x + 0.5 for x in model_range], level, label='Model accuracy',
                       linewidth=3, linestyle='-', marker='s', color=(0.1, 0.2, 0.1, 1),
+                      markersize=10, fillstyle='full')
+            level_0 = level
+        if i == 1 and gc_line:
+            axis.plot([x + 0.5 for x in model_range], [sum(x) for x in zip(level, level_0)], label=None,
+                      linewidth=3, linestyle='dotted', marker='s', color=(0.1, 0.2, 0.1, 1),
                       markersize=10, fillstyle='full')
 
         bottom = bottom + level
@@ -460,7 +507,7 @@ def plot_model_growth_coupled_categories(model_growth_coupled_categories,
 
     axis.set_xlim(0, model_range[-1] + 1)
     axis.set_xticks([x + 0.5 for x in model_range])
-    axis.set_xticklabels(model_growth_coupled_categories.models)
+    axis.set_xticklabels(rename_models(model_growth_coupled_categories.models))
     axis.set_ylim(0, total)
     if y_lim_max_label:
         yticks = [0, total]
@@ -469,7 +516,7 @@ def plot_model_growth_coupled_categories(model_growth_coupled_categories,
     axis.set_yticks(yticks)
     axis.set_yticks(np.arange(0, total + 1, 1), minor=True)
     if model_growth_coupled_categories.target == 'all':
-        axis.set_title('Designs categories (n={})'.format(total), y=1.08)
+        axis.set_title('Simulations of all literature strains (n={})'.format(total), y=1.08)
     else:
         axis.set_title(('{} (n = {})' .format(model_growth_coupled_categories.target, total)),
                        y=1.08)
