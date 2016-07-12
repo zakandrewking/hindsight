@@ -8,6 +8,7 @@ from hindsight.variables import (min_biomass, default_sur, max_our,
 
 import numpy as np
 import pandas as pd
+idx = pd.IndexSlice
 import itertools as it
 from collections import namedtuple
 from ipy_progressbar import ProgressBar
@@ -502,91 +503,94 @@ LethalInteraction = namedtuple('LethalInteraction', ['model', # str
                                                      'example_paper',
                                                      'example_genotype'])
 
-def find_summary_lethal_reactions(sims, max_combinations=5,
-                                  models=m_models_to_compare, debug_limit=None):
+def find_summary_lethal_reactions(sims, max_combinations=5, debug_limit=None, print_solution=False):
     """Returns a summary dataframe of all the lethal combinations and cases where
     max_combinations was not enough to find the lethal interaction.
 
     """
-    to_string = lambda x: ','.join(sorted(x))
     out = [] # list of LethalInteraction's
     not_enough_combinations = []
-    dc = 0
-    for paper in ProgressBar(list(sims.reset_index()['paper'].unique())):
-        res, ne = find_lethal_reactions(sims, paper, max_combinations, models, False)
+    debug_count = 0
+    loaded_models = load_models_to_compare(m_only=True)
+    for _, row in sims.reset_index().iterrows():
+        if row['model'] not in loaded_models:
+            continue
+        res, ne = find_lethal_reactions(row, loaded_models, max_combinations,
+                                        print_solution=print_solution)
+        if res is None:
+            continue
         not_enough_combinations += ne
         out += res
-        if debug_limit is not None and dc >= debug_limit:
+        if debug_limit is not None and debug_count >= debug_limit:
             break
-        dc += 1
-    df = pd.DataFrame.from_records(out, columns=out[0]._fields, index=['model', 'example_paper'])
+        debug_count += 1
+
+    if len(out) == 0:
+        print 'No results'
+        return None, None
+
+    # [namedtuple] to DataFrame
+    df = pd.DataFrame.from_records(out, columns=out[0]._fields,
+                                   index=['model', 'example_paper'])
     return df, not_enough_combinations
 
-def find_lethal_reactions(sims, paper, max_combinations=3,
-                          models=m_models_to_compare, print_solution=False,
-                          gr_lim=1e-3):
+def find_lethal_reactions(series, models, max_combinations,
+                          print_solution=False):
     def get_gr(model):
         sol = model.optimize()
         return 0.0 if sol.f is None else sol.f
 
     out = []; could_not_finds = []; not_enough_combinations = []
-    for model_name in models:
-        case = get_case(sims, paper, model=model_name, first=True)
-        model = load_model(model_name)
+
+    try:
+        setup = setup_for_series(series, models, True)
+        design_no_del = Design(setup.design.heterologous_pathway,
+                                [],
+                                setup.design.target_exchange)
+        # set up
+        apply_design(setup.model, design_no_del, setup.use_greedy_knockouts)
+        apply_environment(setup.model, setup.environment)
+        m = setup.model
+    except SetUpModelError as e:
+        return None, None
+
+    # knock out reactions associated with genes
+    all_reactions = set()
+    for g in set(setup.design.gene_knockouts):
         try:
-            m, _, _, _, _, _, _ = get_model(model, case.additions, case.substrate,
-                                            case.target, case.aerobicity,
-                                            case.deletions_b, copy=True)
-        except SetUpModelError as e:
+            to_remove = [x.id for x in m.genes.get_by_id(g).reactions]
+        except KeyError:
+            could_not_finds.append('(Could not find gene %s in model %s)' % \
+                                    (g, series['model']))
             continue
+        all_reactions = all_reactions.union(to_remove)
 
-        if get_gr(m) > gr_lim:
-            continue
+    # try reaction combinations
+    count = 1; found_lethal = False
+    while not found_lethal and count <= max_combinations:
+        for rs in it.combinations(all_reactions, count):
+            m2 = m.copy()
+            for r in rs:
+                m2.reactions.get_by_id(r).knock_out()
+            gr = get_gr(m2)
+            if gr < min_biomass:
+                found_lethal = True
+                if print_solution:
+                    print '%s, %s: %.3f' % (series['model'], '+'.join(rs), gr)
+                out.append(LethalInteraction(series['model'], rs, gr,
+                                             series['paper'], setup.design.gene_knockouts))
+        count += 1
 
-        # get the model with no deletions
-        m, _, _, _, _, _, _ = get_model(model, case.Additions, case.Substrate,
-                                        case.Target, case.Aerobicity, 'none')
-
-        # knock out reactions associated with genes
-        all_reactions = set()
-        for g in set(case.deletions_b):
-            try:
-                to_remove = [x.id for x in m.genes.get_by_id(g).reactions]
-            except KeyError:
-                could_not_finds.append('(Could not find gene %s in model %s)' % \
-                                       (g, model_name))
-                continue
-            all_reactions = all_reactions.union(to_remove)
-
-        # try reaction combinations
-        count = 1; found_lethal = False
-        while not found_lethal and count <= max_combinations:
-            for rs in combinations(all_reactions, count):
-                m2 = model.copy()
-                for r in rs:
-                    m2.reactions.get_by_id(r).knock_out()
-                gr = get_gr(m2)
-                if gr < gr_lim:
-                    found_lethal = True
-                    if print_solution:
-                        print '%s, %s: %.3f' % (model_name, '+'.join(rs), gr)
-                    else:
-                        out.append(LethalInteraction(model_name, rs, gr, paper,
-                                                     case.deletions))
-            count += 1
-
-        # not enough combinations
-        if not found_lethal:
-            if print_solution:
-                print '%s: Could not find a lethal combination with combinations of %d' % \
-                    (model_name, max_combinations)
-            else:
-                not_enough_combinations.append([model_name, paper, case.deletions])
+    # not enough combinations
+    if not found_lethal:
+        if print_solution:
+            print '%s: Could not find a lethal combination with combinations of %d' % \
+                (series['model'], max_combinations)
+        not_enough_combinations.append([series['model'], series['paper'], setup.design.gene_knockouts])
 
     if print_solution:
         if len(could_not_finds) > 0:
             print
         for f in could_not_finds:
             print f
-    else:
-        return out, not_enough_combinations
+    return out, not_enough_combinations

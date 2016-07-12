@@ -269,6 +269,9 @@ def _category_error(sims, tree_table=None, **kwargs):
 def _category_me_uncategorized(sims, **kwargs):
     return 'Uncategorized ME simulations', sims.index.map(lambda x: x[1] == 'ME')
 
+def _category_uncategorized(sims, **kwargs):
+    return 'Target byproduct is not growth coupled (not lethal in silico)', ~sims.target_exchange.isnull()
+
 def _category_parameterization(sims, sampling_table=None, **kwargs):
     def any_g_coupled(ser):
         l = ser['target_exchange_fluxes']
@@ -304,13 +307,14 @@ def _category_growth_coupled(sims, **kwargs):
 # low to high priority
 _category_fns = [
     # _category_error,
-    _category_insufficient_knockouts,
-    _category_detrimental_knockouts,
-    _category_model_limitation, # TODO make sure none of these overlap with
-                                # insufficient_knockouts
-    _category_me_uncategorized,
-    _category_non_unique, # could also be insufficient knockouts
+    # _category_insufficient_knockouts,
+    # _category_detrimental_knockouts,
+    # _category_model_limitation, # TODO make sure none of these overlap with
+    #                             # insufficient_knockouts
+    # _category_me_uncategorized,
+    _category_uncategorized,
     _category_lethal, # could also be isozymes
+    _category_non_unique, # could also be insufficient knockouts
     _category_parameterization,
     _category_growth_coupled, # highest priority
 ]
@@ -340,8 +344,9 @@ def calculate_category_map(df, sort='year', title='Failure model categories',
 
 def _category_colors(unique_categories):
     palette = sns.color_palette('Paired', len(unique_categories) + 1, desat=0.9)
-    #         greens             blues         dark orange      purple          red           pink
-    palette = palette[3:1:-1] + palette[:2] + palette[-2:-1] + palette[-1:] + palette[5:6] + palette[4:5]
+    # #         greens             blues         dark orange      purple          red           pink
+    # palette = palette[3:1:-1] + palette[:2] + palette[-2:-1] + palette[-1:] + palette[5:6] + palette[4:5]
+    palette = palette[3:1:-1] + palette[1::-1] + palette[4:5]
 
     cmap = (mpl
             .colors
@@ -524,3 +529,69 @@ def plot_model_growth_coupled_categories(model_growth_coupled_categories,
     axis.set_xlabel('Model')
 
     return axis
+
+# -------------------------------------------------------------------------------
+# Model comparison
+# -------------------------------------------------------------------------------
+
+ModelComparison = namedtuple('ModelComparison', ['models',
+                                                 'paper',
+                                                 'min_secretions', # np.array
+                                                 'max_secretions', # np.array
+                                                 'growth_rates', # np.array
+                                                 'target_exchange',
+                                                 'is_yield',
+                                                 'label'])
+ModelComparison.__repr__ = lambda self: '<ModelComparison %s, %s>' % (self.paper, str(self.models))
+
+def get_model_comparison(sims, paper, models=models_to_compare, plot_yield=False):
+    paper_sims = sims.xs(paper, level=0).loc[models]
+    if plot_yield:
+        min_secretions = paper_sims['yield_min'].fillna(0).values
+        max_secretions = paper_sims['yield_max'].fillna(0).values
+    else:
+        min_secretions = paper_sims['min'].fillna(0).values
+        max_secretions = paper_sims['max'].fillna(0).values
+    growth_rates = paper_sims['growth_rate'].fillna(0).values
+    target_exchange = paper_sims.iloc[0].target_exchange
+    return ModelComparison(models, paper, min_secretions, max_secretions,
+                           growth_rates, target_exchange, plot_yield,
+                           paper)
+
+def plot_model_comparison(axis, model_comparison,
+                          colors=sns.color_palette('muted', 2)):
+    """Plot production variability and growth rates for each model.
+
+    """
+    xs = np.array(range(len(model_comparison.models)))
+
+    # # plot growth_rates
+    # ax2 = axis.twinx()
+    # gr_mask = np.isfinite(model_comparison.growth_rates)
+    # ax2.plot(xs[gr_mask], model_comparison.growth_rates[gr_mask],
+    #          c=colors[1], label='Growth rates')
+    # ax2.set_ylabel('Growth rate', rotation=-90, labelpad=20)
+    # max_val = max(model_comparison.growth_rates[gr_mask])
+    # ax2.set_ylim(-0.04 * max_val, 1.2 * max_val)
+    # ax2.grid(False)
+    # ax2.get_yaxis().set_tick_params(which='both', direction='out', length=5,
+    #                                 colors=colors[1])
+    # for tl in ax2.get_yticklabels():
+    #     tl.set_color(colors[1])
+
+    # plot production min and max
+    y1_mask = np.isfinite(model_comparison.max_secretions)
+    y2_mask = np.isfinite(model_comparison.min_secretions)
+    axis.plot(xs[y1_mask], model_comparison.max_secretions[y1_mask],
+              c=colors[0], label='Max optimal production')
+    axis.plot(xs[y2_mask], model_comparison.min_secretions[y2_mask],
+              linestyle='--', c=colors[0], linewidth=6, label='Min optimal production')
+    axis.set_xticklabels([''] + rename_models(model_comparison.models, year=False))
+    axis.set_xlabel('Model')
+    axis.set_ylabel('Product yield' if model_comparison.is_yield else
+                    'Production rate')
+    axis.set_xlim(-0.2, xs[-1] + 0.2)
+    max_val = max(model_comparison.max_secretions[y1_mask])
+    axis.set_ylim(-0.04 * max_val, 1.2 * max_val)
+
+    axis.legend(loc='upper left')
