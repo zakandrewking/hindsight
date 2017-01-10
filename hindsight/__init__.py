@@ -1,2 +1,2 @@
-from main import *
-from sampling import *
+from hindsight.main import *
+from hindsight.sampling import *

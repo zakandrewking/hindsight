@@ -1,6 +1,10 @@
 from theseus import add_pathway
 from hindsight.variables import NotFoundError
-from minime.solve.algorithms import binary_search, solve_at_growth_rate
+
+try:
+    from minime.solve.algorithms import binary_search, solve_at_growth_rate
+except ImportError:
+    print('no minime')
 
 no_route_exchanges = [
     # in the byproduct secretion profile, but not in the model

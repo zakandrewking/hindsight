@@ -15,9 +15,13 @@ from ipy_progressbar import ProgressBar
 import cobra
 from cobra.manipulation.delete import find_gene_knockout_reactions
 from cobra.flux_analysis.parsimonious import optimize_minimal_flux
-from minime.solve.algorithms import binary_search, solve_at_growth_rate
 from theseus import carbons_for_exchange_reaction, load_model, setup_model
 from theseus.bigg import download_model
+
+try:
+    from minime.solve.algorithms import binary_search, solve_at_growth_rate
+except ImportError:
+    print('no minime')
 
 # --------------------------------------------------
 # Models
@@ -130,7 +134,7 @@ def apply_environment(model, environment):
                     new_bounds[me_r_id] = (0, bs[1])
         other_bounds = new_bounds
 
-    for r_id, bs in environment.other_bounds.iteritems():
+    for r_id, bs in environment.other_bounds.items():
         try:
             reaction = model.reactions.get_by_id(r_id)
         except KeyError:
@@ -433,6 +437,138 @@ def run_simulation(series, loaded_models=None, use_greedy_knockouts=True):
     # convert to columns
     return series.append(new_series)
 
+class EnvelopeData(namedtuple('EnvelopeData', ['growth_rates',
+                                               'production_rates',
+                                               'target_exchange',
+                                               'label'])):
+    """A structure for storing production envelope points.
+
+    growth_rates: An array of growth rates.
+
+    production_rates: An array of the corresponding maximum production rate at
+    the given growth rate.
+
+    target_exchange: The ID of the target reaction.
+
+    label: A label for the dataset (for plotting)
+
+    """
+    pass
+
+def calculate_production_envelope(model, target_id, min_biomass, label='',
+                                  n_points=20):
+    """Calculate the production envelope for the model given a target. This function
+    returns the model to its original state.
+
+    Adapated from cobra.oven.aliebrahim.designAnalysis
+
+    Parameters
+    ----------
+    model : cobra model
+        The cobra model should already have the uptake rates se
+    target_id : str
+        The id of the exchange reaction for the target compound
+    n_points : int
+        The number of points to calculate for the production envolope
+
+    Returns
+    -------
+
+    An instance of EnvelopeData.
+
+    """
+
+    target_id = str(target_id)
+    try:
+        target_reaction = model.reactions.get_by_id(target_id)
+    except KeyError:
+        warn('Reaction %s not in model' % target_id)
+        return EnvelopeData([0], [0], target_id, label)
+    original_target_bounds = (target_reaction.lower_bound,
+                              target_reaction.upper_bound)
+
+    # if solver.solve_problem(lp) != 'optimal':
+    solution = model.optimize()
+    if solution.status != 'optimal' or abs(solution.f) < min_biomass:
+        return EnvelopeData([0], [0], target_id, label)
+
+    max_growth_rate = solution.f
+    max_growth_production = solution.x_dict[target_reaction.id]
+
+    # extract the current objective so it can be changed
+    original_objectives = {}
+    for reaction in model.reactions:
+        if reaction.objective_coefficient != 0:
+            original_objectives[reaction] = reaction.objective_coefficient
+            reaction.objective_coefficient = 0
+    # calculate the maximum possible production rate
+    target_reaction.objective_coefficient = 1
+    model.optimize(objective_sense='minimize')
+    min_production_rate = model.solution.f
+    model.optimize(objective_sense='maximize')
+    max_production_rate = model.solution.f
+    production_rates = np.linspace(min_production_rate,
+                                   max_production_rate, n_points)
+
+    # ensure the point of production at maximum growth is included
+    max_ind = np.abs(production_rates - max_growth_production).argmin()
+    production_rates[max_ind] = max_growth_production
+
+    # if the 0 point was overwritten in the last operation
+    if production_rates[0] != 0:
+        production_rates[1] = production_rates[0]
+        production_rates[0] = 0
+    growth_rates = production_rates * 0
+
+    # make the objective coefficient what it was before
+    target_reaction.objective_coefficient = 0
+    for reaction, coefficient in original_objectives.items():
+        reaction.objective_coefficient = coefficient
+
+    # calculate the maximum growth rate at each production rate
+    for i in range(n_points):
+        target_reaction.lower_bound = production_rates[i]
+        target_reaction.upper_bound = production_rates[i]
+        solution = model.optimize()
+        if solution.status == 'optimal':
+            growth_rates[i] = solution.f
+        else:
+            growth_rates[i] = 0
+
+    # reset the bounds on the target reaction
+    target_reaction.lower_bound = original_target_bounds[0]
+    target_reaction.upper_bound = original_target_bounds[1]
+
+    return EnvelopeData(growth_rates, production_rates, target_id, label)
+
+
+def plot_production_envelope(envelope_data, axis=None, plot_kwargs={}):
+    """ Plot a production envelope.
+
+    Arguments
+    ---------
+
+    envelope_data: An instance of EnvelopeData.
+
+    axis: An axis to plot on.
+
+    plot_kwargs: Arguments passed to axis.plot().
+
+    """
+
+    if not axis:
+        _, axis = plt.subplots()
+
+    axis.plot(envelope_data.growth_rates, envelope_data.production_rates,
+              label=envelope_data.label, **plot_kwargs)
+    axis.set_title("Production envelope for %s" % (envelope_data.target_exchange))
+    axis.set_xlabel("Growth rate")
+    axis.set_ylabel("Production rate")
+    axis.set_xlim(left=0, right=1.2*max(envelope_data.growth_rates))
+    axis.set_ylim(bottom=0, top=1.2*max(envelope_data.production_rates))
+
+    return axis
+
 def calculate_envelopes(model_comparison):
     """Calculate production envelopes for wildtype vs design."""
     target = model_comparison.simulation_setup.design.target_exchange
@@ -463,7 +599,7 @@ def get_secretion(model, flux_dict, flux_threshold=1e-3, sort=True,
     Looks for reactions that secrete carbon or are in non_carbon_secretion.
 
     """
-    secretions = [(k, v) for k, v in flux_dict.iteritems()
+    secretions = [(k, v) for k, v in flux_dict.items()
                   if k.startswith('EX_') and v > flux_threshold and
                   (carbons_for_exchange_reaction(model.reactions.get_by_id(k)) > 0 or
                    k in non_carbon_secretion)]
@@ -526,7 +662,7 @@ def find_summary_lethal_reactions(sims, max_combinations=5, debug_limit=None, pr
         debug_count += 1
 
     if len(out) == 0:
-        print 'No results'
+        print('No results')
         return None, None
 
     # [namedtuple] to DataFrame
@@ -576,7 +712,7 @@ def find_lethal_reactions(series, models, max_combinations,
             if gr < min_biomass:
                 found_lethal = True
                 if print_solution:
-                    print '%s, %s: %.3f' % (series['model'], '+'.join(rs), gr)
+                    print('%s, %s: %.3f' % (series['model'], '+'.join(rs), gr))
                 out.append(LethalInteraction(series['model'], rs, gr,
                                              series['paper'], setup.design.gene_knockouts))
         count += 1
@@ -584,13 +720,13 @@ def find_lethal_reactions(series, models, max_combinations,
     # not enough combinations
     if not found_lethal:
         if print_solution:
-            print '%s: Could not find a lethal combination with combinations of %d' % \
-                (series['model'], max_combinations)
+            print('%s: Could not find a lethal combination with combinations of %d' %
+                  (series['model'], max_combinations))
         not_enough_combinations.append([series['model'], series['paper'], setup.design.gene_knockouts])
 
     if print_solution:
         if len(could_not_finds) > 0:
-            print
+            print()
         for f in could_not_finds:
-            print f
+            print(f)
     return out, not_enough_combinations

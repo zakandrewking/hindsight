@@ -5,10 +5,14 @@ from hindsight.pathways import (add_heterologous_pathway, get_designs,
 from hindsight import download_or_load_model_me_placeholder
 from hindsight.variables import min_biomass
 from theseus import setup_model, load_model
-from minime.solve.algorithms import solve_at_growth_rate, binary_search
-from minime.solve.symbolic import compile_expressions
 import pytest
 from pytest import raises
+
+try:
+    from minime.solve.algorithms import solve_at_growth_rate, binary_search
+    from minime.solve.symbolic import compile_expressions
+except ImportError:
+    print('no minime')
 
 DEBUG = False
 

@@ -4,8 +4,12 @@ from hindsight import (setup_for_series, apply_design, apply_environment,
                        me_optimize_growth)
 from hindsight.variables import min_biomass
 
-from minime.solve.symbolic import compile_expressions
-from minime.core.MEReactions import MetabolicReaction
+try:
+    from minime.solve.symbolic import compile_expressions
+    from minime.core.MEReactions import MetabolicReaction
+except ImportError:
+    print('no minime')
+
 import pandas as pd
 import numpy as np
 import json
