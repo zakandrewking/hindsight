@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-from hindsight.hindsight import load_models_to_compare, run_simulation
+from hindsight.main import load_models_to_compare, run_simulation
 from hindsight.variables import min_biomass
 from parallel_pandas import apply_p
 
