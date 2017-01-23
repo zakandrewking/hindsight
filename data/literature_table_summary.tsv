@@ -1,0 +1,90 @@
+citation_key	year	target	simulation	strain	parent	additions	deletions	aerobicity	substrate	evolved	byproduct_order	strategies	see_study	gene_details
+Ingram1987-ha	1987	Ethanol	none	TC4-pLOI295	TC4 (K12)	pdc, adhB	none	anaerobic	glucose+LB	no		heterologous		
+Gupta1989-tu	1989	D-Lactate	none	SHH43	W1485	none	adhE, pta	anaerobic	glucose	no		knockout		
+Ohta1991-xr	1991	Ethanol	none	KO11	B (ATCC 11303)	pdc, adhB	frdA, pflB, recA	anaerobic	glucose+LB	no		knockout, heterologous		
+Stols1997-kf	1997	Succinate	none	NZN111 pMEA1	W1485	Ascaris suum Malic Enzyme	ldhA, pflB	microaerobic	glucose+LB	no		heterologous, knockout		malic enzyme (Ascaris suum) expressed in E. coli
+Stols1997-yg	1997	Succinate	none	NZN111	W1485	none	ldhA, pflB	anaerobic	glucose	no		upregulation, knockout		
+Donnelly1998-sb	1998	Succinate	none	AFP111	W1485	none	ldhA, pflB, ptsG	anaerobic	glucose	yes		knockout, evolution		
+Chang1999-qi	1999	L-Lactate	none	JP204 (pLS65)	RR1	ldhL	pta, ldhA	anaerobic	glucose	no		heterologous, knockout		ldhL (Lactobacillus casei)
+Chang1999-qi	1999	D-Lactate	none	J203	RR1	none	pta, ppc	anaerobic	glucose	no		knockout		
+Dien2001-gq	2001	L-Lactate	none	FBR11	ATCC11303 (B)	ldhL	pflB, ldhA	anaerobic	D-Xylose	no		heterologous, knockout		ldhL (Streptococcus bovis)
+Dien2001-gq	2001	L-Lactate	none	FBR11	ATCC11303 (B)	ldhL	pflB, ldhA	anaerobic	Glucose	no		heterologous, knockout		ldhL (Streptococcus bovis)
+Vemuri2002-xk	2002	Succinate	none	AFP111/pTrc99A-pyc	NZN111/AFP111	pyc	pflB, ldhA, ptsG	anaerobic	glucose+LB	no		heterologous, knockout		pyc (Rhizobium etli)
+Zelic2003-pn	2003	Pyruvate	none	YYC202 ldhA	DSM 14335	none	aceE, aceF, pflB, poxB, pps, ldhA	microaerobic	glucose+acetate	no	nd	knockout		
+Zhou2003-jn	2003	L-Lactate	none	SZ83	W3110	ldhL	focA, pflB, frdB, frdC, adhE, ackA, ldhA	anaerobic	glucose	yes		heterologous, knockout, evolution		ldhL (Pediococcus acidilactici)
+Zhou2003-dr	2003	D-Lactate	none	SZ63	W3110	none	focA, pflB, frdB, frdC, adhE, ackA	anaerobic	glucose	no		knockout		
+Causey2003-wr	2003	Acetate	none	TC36	W3110	none	focA, pflB, frdB, frdC, ldhA, atpF, atpH, adhE, sucA	aerobic	glucose	yes		knockout, evolution		
+Causey2004-vs	2004	Pyruvate	none	YYC202 ldhA	DSM 14335	none	aceE, aceF, pflB, poxB, pps, ldhA	microaerobic	glucose+acetate	no	nd	knockout		
+Fong2005-ty	2005	D-Lactate	OptKnock	pta-adhE 4	MG1655	none	pta, adhE	anaerobic	glucose	yes		knockout, evolution		
+Fong2005-ty	2005	D-Lactate	OptKnock	pta-pfk	MG1655	none	pta, pfkA	anaerobic	glucose	yes		knockout, evolution		
+Fong2005-ty	2005	D-Lactate	OptKnock	pta-adhE-pfk-glk	MG1655	none	pta, adhE, pfkA, glk	anaerobic	glucose	yes		knockout, evolution		
+Lin2005-km	2005	Succinate	FBA	HL51276k+pKK313	GJT001	pepc	iclR, icd, sdhA, sdhB, ackA, pta, poxB	microaerobic	glucose+LB	no		heterologous, knockout	Tolentino1992, Lin2005a	pepc (Sorghum) mutant (malate feedback inhibition resistant)
+Sanchez2005-mu	2005	Succinate	none	SBS220MG+pHL413	MG1655	pyc	ldhA, adhE, ptsG	anaerobic	glucose+LB	no		heterologous, knockout		pyc (Lactococcus lactis)
+Lee2005-xo	2005	Succinate	FBA	W3110GFA	W3110	none	ptsG, pykF, pykA	anaerobic	pyruvate+yeast extract	no		knockout		
+Lin2005-px	2005	Succinate	FBA	HL51276k	GJT001; Tolentino1992	none	iclR, icd, sdhA, sdhB, ackA, pta, poxB	microaerobic	glucose+LB	no		knockout	Lin2005	
+Sanchez2005-cz	2005	Succinate	none	SBS660MG+pHL413+pHL531	MG1655	pyc	ldhA, adhE, ackA, pta, iclR, arcA	anaerobic	glucose	no		heterologous, knockout	Sanchez2005a	pyc (Lactococcus lactis) and citZ (Bacillus subtilis)
+Lee2005-xo	2005	Succinate	FBA	W3110GFA	W3110	none	ptsG, pykF, pykA	anaerobic	glucose+yeast extract	no		knockout		
+Zhou2005-bc	2005	D-Lactate	none	SZ186	B (ATCC 11303)	none	frdA, pflB, adhE, ackA	anaerobic	glucose	``By sequentially subculturing (1% inoculum) to enrich for spontaneous mutations that increased growth, improved strains were selected in which both volumetric productivity and lactate production were both improved''	nd	knockout, evolution	Ohta1991	
+Grabar2006-ge	2006	L-Lactate	none	TG108	B (ATCC 11303)	ldhL	frdA, pflB, adhE, ackA, ldhA, mgsA	anaerobic	glucose	yes		knockout, evolution, heterologous	Zhou2006, Ohta1991	ldhL (Pediococcus acidilactici)
+Zhou2006-uz	2006	D-Lactate	none	SZ194	B (ATCC 11303)	none	frdA, pflB, adhE, ackA	anaerobic	glucose+betaine	``selected for rapid growth and fermentation in 10% glucose''		knockout, evolution	Zhou2005, Ohta1991	
+Grabar2006-ge	2006	D-Lactate	none	TG114	B (ATCC 11303)	none	frdA, pflB, adhE, ackA, mgsA	anaerobic	glucose	yes		knockout, evolution	Zhou2006, Ohta1991	
+Zhang2007-fu	2007	L-Alanine	none	XZ123-alaD	B (ATCC 11303)	alaD	frdA, pflB, adhE, ackA, ldhA, mgsA	anaerobic	glucose+betaine	yes		knockout, evolution, heterologous		alaD (Geobacillus stearothermophilus)
+Zhang2007-fu	2007	L-Alanine	none	XZ132-alaD	B (ATCC 11303)	alaD	frdA, pflB, adhE, ackA, ldhA, mgsA, dadX	anaerobic	glucose+betaine	yes		knockout, evolution, heterologous		alaD (Geobacillus stearothermophilus)
+Maeda2007-oh	2007	H2	none	BW25113-hyaB-hybC-hycA-fdoG-frdC-ldhA-aceE	BW25113	pdc, adhB	hyaB, hybC, hycA, fdoG, frdC, ldhA, aceE	anaerobic	glucose	no		knockout, heterologous, upregulation		
+Zhu2007-ef	2007	D-Lactate	none	ALS974	YYC202	none	frdA, frdB, frdC, frdD, aceE, aceF, pflB, poxB, pps	anaerobic	glucose	no		knockout	Zelic2003	
+Yazdani2008-ic	2008	Ethanol	none	SY03 (pZSKLMgldA)	MG1655	none	frdA, pta	anaerobic	glycerol	no		knockout, upregulation		
+Atsumi2008-zd	2008	1-Propanol	none	1propanol-SA203-pSA55-pSA62	BW25113	1_propanol_adh2_kivd_ilva_leu	adhE, ldhA, frdB, frdC, fnr, pta, ilvD	microaerobic	D-Glucose+L-Valine+L-Isoleucine+L-Leucine	no		knockout, heterologous, upregulation	Atsumi2008a	five KDCs tested were Pdc6 (S. cerevisiae), Aro10 (S. cerevisiae), Thi3 (S. cerevisiae), Kivd (Lactococcus lactis), and Pdc (Clostridium acetobutylicum) with Adh2 (S. cerevisiae); alsS (Bacillus subtilis) better than native ilvIH
+Atsumi2008-zd	2008	Isobutanol	none	JCL88-pSA54-pSA55	BW25113	isobutanol_als_ilv_kdc_adh	adhE, ldhA, frdB, frdC, fnr, pta	microaerobic	glucose	no		knockout, heterologous, upregulation	Atsumi2008a	five KDCs tested were Pdc6 (S. cerevisiae), Aro10 (S. cerevisiae), Thi3 (S. cerevisiae), Kivd (Lactococcus lactis), and Pdc (Clostridium acetobutylicum) with Adh2 (S. cerevisiae); alsS (Bacillus subtilis) better than native ilvIH
+Atsumi2008-zd	2008	1-Butanol	none	SA203-pSA55-pSA62	BW25113	1_butanol_adh2_kivd_ilva_leu	adhE, ldhA, frdB, frdC, fnr, pta, ilvD	microaerobic	D-Glucose+L-Valine+L-Isoleucine+L-Leucine	no		knockout, heterologous	Atsumi2008a	strategies: knockout, heterologous, upregulation
+Yazdani2008-ic	2008	Ethanol	none	SY04 (pZSKLMgldA)	MG1655	none	frdA, pta, fdhF	anaerobic	glycerol	no		knockout, upregulation		
+Trinh2008-qx	2008	Ethanol	EM	CT1101	MG1655	none	zwf, ndh, sfcA, maeB, ldhA, frdA, poxB, pta, ptsG, glk, manX	anaerobic	glucose+LB	no	nd	knockout		
+Connor2008-zi	2008	3-Methyl-1-butanol	none	IAA69-pIAA11-pIAA13-pIAA16	BW25113	3_methyl_1_butanol_kivd_adh2	adhE ldhA frdB frdC fnr pta pflB ilvE tyrB	anaerobic	Glucose	no		knockout, heterologous, upregulation		
+Zhou2008-gb	2008	Succinate	none	KJ134	ATCC 8739	none	ldhA, adhE, focA, pflB, mgsA, poxB, tdcE, citF, aspC, sfcA, pta, ackA	anaerobic	glucose	starting strain, see Jantama2008		knockout, evolution		
+Atsumi2008-ao	2008	1-Butanol	none	JCL88	BW25113	bcd etfAB	adhE, ldhA, frdB, frdC, fnr, pta	microaerobic	glucose	no		knockout, heterologous, upregulation		crt bcd etfBA hbd thl (Clostridium acetobutylicum), ccr (Streptomyces coelicolor), bcd etfBA (Megasphaera elsdenii)
+Jantama2008-sk	2008	Succinate	none	KJ134	ATCC 8739	none	ldhA, adhE, focA, pflB, mgsA, poxB, tdcE, citF, aspC, sfcA, pta, ackA	anaerobic	glucose	starting strain, see Jantama2008		knockout, evolution		
+Portnoy2008-ce	2008	D-Lactate	none	ECOM31LA	MG1655	none	cydA, cydB, appB, appC, cyoA, cyoB, cyoC, cyoD, ygiN	aerobic	glucose	yes		knockout, evolution		
+Jantama2008-xv	2008	Succinate	none	KJ073	ATCC 8739	none	ldhA, adhE, ackA, focA, pflB, mgsA, poxB	anaerobic	glucose+betaine	yes		knockout, evolution, heterologous		
+Yan2009-ij	2009	(R,R)-2,3-BDO	none	JCL260 adh; Atsumi2008a	BW25113	adh	adhE, ldhA, frdB, frdC, fnr, pta, pflB	microaerobic	glucose+yeast extract	no	nd	knockout, heterologous		compared bdhA (B. subtilis), adh (Clostridium beijerinkii), adh (Thermoanaerobacter brockii), budC (K. pneumoniae)...see Table 4; also expressed alsS (B. subtilis), alsD (B. subtilis)
+Utrilla2009-is	2009	D-Lactate	none	CL3	MG1655	none	pflB adhE frdA	anaerobic	Glucose	no		knockout		
+Yan2009-ij	2009	meso-2,3-BDO	none	JCL260 budC; Atsu	BW25113	budC	adhE, ldhA, frdB, frdC, fnr, pta, pflB	microaerobic	glucose+yeast extract	no	nd	knockout, heterologous		compared bdhA (B. subtilis), adh (Clostridium beijerinkii), adh (Thermoanaerobacter brockii), budC (K. pneumoniae)...see Table 4; also expressed alsS (B. subtilis), alsD (B. subtilis)
+Blankschien2010-hm	2010	Succinate	none	MG1655-adhE-pta-poxB-ldhA-ppc[pZS-pyc	MG1655	pyc	adhE, pta, poxB, ldhA, ppc	anaerobic	glycerol	no		knockout, heterologous		pyc (Lactococcus lactis)
+Jian2010-ex	2010	3HBco3HV	none	BWapld	BW25113	phbCAB	ackA, pta, poxB, ldhA, adhE	anaerobic	glucose	no		knockout, heterologous		phbCAB (Ralstonia eutropha)
+Hu2010-if	2010	H2	none	HW2	BW25113	none	frdC	anaerobic	glycerol	both adaptive evolution and chemical mutagenesis combined with a selection method based on increased growth on glycerol		knockout, mutagenesis, evolution		
+Zhang2010-ud	2010	Succinate	none	XZ721	ATCC 8739	none	pflB, ptsI	anaerobic	glycerol	no		knockout, upregulation		
+Jung2010-aw	2010	PLA	MOMA	JLX10 PhaC1310Ps6-19 Pct540Cp	XL1-Blue	PhaC1Ps6-19, PctCp	ackA, ppc, adhE	microaerobic	glucose	no	nd	knockout, heterologous, upregulation, mutagenesis	Yang2010	See Cho et al, 2006, Park et al. 2008b, Yang et al. 2010
+Jian2010-ex	2010	3HBco3HV	none	BWapl	BW25113	phbCAB	ackA, pta, poxB, ldhA	anaerobic	glucose	no		knockout, heterologous		phbCAB (Ralstonia eutropha)
+Jung2010-aw	2010	3HBcoLA	MOMA	JLX10 PhaC1310Ps6-19 Pct540Cp-PhaABCn	XL1-Blue	PhaC1Ps6-19, PctCp, phaABC	ackA, ppc, adhE	microaerobic	glucose	no	nd	knockout, heterologous, upregulation, mutagenesis	Yang2010	See Cho et al, 2006, Park et al. 2008b, Yang et al. 2010
+Atsumi2010-mb	2010	Isobutanol	none	SA542	BW25113	isobutanol_als_ilv_kdc_adh	adhE, ldhA, frdB, frdC, fnr, pta, pflB, yqhD	anaerobic	glucose+yeast extract	no	nd	knockout, heterologous, upregulation	Atsumi2008	compared adhA (Lactoccocus lactis), yqhD (E. coli), and ADH2 (S. cerevisiae); alsS (Bacillus subtilis), kivd (Lactoccocus lactis)
+Mazumdar2010-pt	2010	D-Lactate	none	LA02 dld	MG1655	none	pta, adhE, frdA, dld	anaerobic	glycerol	no		knockout, upregulation		
+Jian2010-ex	2010	3HBco3HV	none	BWapldf	BW25113	phbCAB	ackA, pta, poxB, ldhA, adhE, pflB	anaerobic	glucose	no		knockout, heterologous		phbCAB (Ralstonia eutropha)
+Yim2011-zt	2011	14BDO	OptKnock	ECKh-422	W3110	sucD, 4hbd, sucA, cat2, 025B	ldhA, adhE, pflB, mdh, arcA	microaerobic	glucose	no		knockout, heterologous		lpdA (Klebsiella pneumonia)
+Trinh2011-rx	2011	Isobutanol	EM	BFA7.001(DE3) pCT13	BW25113	isobutanol_als_ilv_kdc_adh	zwf, mdh, frdA, ndh, pta, poxB, ldhA	anaerobic	glucose+yeast extract	no		knockout, heterologous, upregulation		alsS (Bacillus subtilis), kivd (Lactoccocus lactis), ADH2 (S. cerevisiae)
+Shen2011-ds	2011	1-Butanol	none	JCL299-pEL11-pIM8-pCS138	BW25113	bcd etfAB	adhE, ldhA, frdB, frdC, pta	anaerobic	glucose+yeast extract	yes, ''growth rescue`` to optimize the 1-butanol pathway. mutagenesis + ALE selection		knockout, heterologous, upregulation		compared ter (Fibrobacter succinogenes), ter (Flavobacterium johnsoniae), ter (Treponema vincentii), ter (Treponema denticola); atoB (Escherichia coli), adhE2 (Clostridium acetobutylicum), crt (Clostridium acetobutylicum), hbd (Clostridium acetobutylicum), fdh (Candida boidinii)
+Dellomonaco2011-eb	2011	1-Butanol	none	RB02-yqhD-eutE	MG1655	bcd etfAB	fadR, atoC, arcA, adhE, pta, frdA, yqhD, eutE	anaerobic	glucose	no		knockout, heterologous, upregulation		
+Singh2011-am	2011	Succinate	TFBA	AD346	BW25113	none	ldhA, pflB, ptsG, adhE	microaerobic	LB+glucose, sorbitol, and gluconate	no	nd	knockout, upregulation		
+Jung2011-dx	2011	PLA	none	JLXF5 PhaC1310Ps6-19 Pct540Cp	XL1-Blue	PhaC1Ps6-19, PctCp	pflB, frdA, frdB, frdC, frdD, adhE, lacI	microaerobic	glucose	no		knockout, heterologous, upregulation	Jung2010	See Cho et al, 2006, Park et al. 2008b, Yang et al. 2010
+Dekishima2011-us	2011	1-Hexanol	none	JCL299/pEL11/pEL102/pCS138	BW25113	Bktb bcd etfAB	adhE, ldhA, frdB, frdC, pta	anaerobic	glucose+yeast extract	no		knockout, heterologous, upregulation	Shen2011	compared ter (Euglena gracilis), ter (Treponema denticola); atoB (Escherichia coli), adhE2 (Clostridium acetobutylicum), crt (Clostridium acetobutylicum), fdh (Candida boidinii), BktB (Ralstonia eutropha), hbd (Clostridium acetobutylicum)
+Bastian2011-ef	2011	Isobutanol	none	SA542-nadh	BW25113	isobutanol_als_ilv_nadh_kdc_adh	adhE, ldhA, frdB, frdC, fnr, pta, pflB, yqhD	anaerobic	glucose	no	nd	knockout, heterologous, upregulation, enzyme evolution		engineered NADH-dependent ilvC (E. coli), engineered higher-efficiency AdhA (Lactococcus lactis), Kivd (Lactococcus lactis), alsS (Bacillus subtilis)
+Zhang2011-zm	2011	L-Malate	none	XZ658	ATCC 8739	none	ldhA, ackA, adhE, pflB, mgsA, poxB, frdB, frdC, sfcA, maeB, fumB, fumA, fumC	anaerobic	glucose	no		knockout	Jantama2008	
+Zhou2011-nt	2011	D-Lactate	none	B0013-070	CICIM B0013	none	ackA, pta, pps, pflB, dld, poxB, adhE, frdA	microaerobic	glucose	no		knockout		
+Jung2011-dx	2011	3HBcoLA	none	JLXF5-PhaC1310Ps6-19-Pct540Cp-PhaABCn	XL1-Blue	PhaC1Ps6-19, PctCp, phaABC	pflB, frdA, frdB, frdC, frdD, adhE, lacI	microaerobic	glucose	no		knockout, heterologous, upregulation	Jung2010	See Cho et al, 2006, Park et al. 2008b, Yang et al. 2010
+Kangming_Tian2012-bl	2012	D-Lactate	none	B0013-070-pUC-ldhA	CICIM B0013	none	ackA, pta, pps, pflB, dld, poxB, adhE, frdA	microaerobic	glycerol	no		knockout, upregulation	Zhou2011	
+Munjal2012-sy	2012	Ethanol	none	SSY09-pZSack	B (CGSC 2507)	none	pflB, ackA, frdA, ldhA	microaerobic	glucose	no		knockout, upregulation		
+Munjal2012-sy	2012	Ethanol	none	SSY09-pZSack	B (CGSC 2507)	none	pflB, ackA, frdA, ldhA	microaerobic	xylose	no		knockout, upregulation		
+Park2012-rs	2012	Methyl ketones	none	MG1655-pTr-cHis2A-shmks2-shmks1	MG1655	cHis2A-shmks2-shmks1	adhE, ldhA, poxB, pta	microaerobic	glucose	no		knockout, heterologous		shmks1 (Solanum habrochaites), shmks2 (Solanum habrochaites)
+Garza2012-dy	2012	1-Butanol	none	E. coli EG03	B	bcd etfAB	ldhA, ackA, pflB, adhE, pdhR, frdA, frdB, frdC, frdD, mgsA	anaerobic	glucose+LB	no		knockout, heterologous, upregulation	Wang2011 (SZ470)	thiL, hbd, crt, bcd, etfA, etfB, adheII (Clostridium acetobutylicum)
+Wang2012-uz	2012	D-Lactate	none	HBUT-D	W (ATCC 9637)	none	adhE, frdA, frdB, frdC, frdD, pta, pflB, aldA, cscR	anaerobic	sucrose	yes		knockout, evolution		
+Wang2012-ib	2012	PHB	none	BWRY8hyd3PHBacs	BW25113	phaCAB-hydrogenase-3-acsA	hyaB, hybC, hycA, fdoG, frdC, ldhA, aceE	anaerobic	glucose	no		knockout, upregulation, heterologous	\textbackslash{}cite\{Maeda2007\}	phbCAB (Ralstonia eutropha)
+Iverson2013-ng	2013	Xylitol	none	AI05	E. coli B	xylitol_xr	frdB frdC ldhA ackA focA adhE ptsG	anaerobic	glucose+xylose	no		knockout, upregulation	Zhou2008-gb	
+Shen2013-uo	2013	1-Propanol	FBA	CRS68	BW25113	ilvA, kivD, ADH2, cimA, leuBCD	ilvB, ilvI, leuA, adhE, ldhA, frdA, pta	anaerobic	glucose+yeast extract	no		knockout, heterologous, upregulation		cimA (Methanococcus jannaschii), kivd (Lactococcus lactis), ADH2 (Saccharomyces cerevisiae), yqhD (E. coli)
+Mazumdar2013-mw	2013	L-Lactate	none	LA20 (pZSglpKglpD)	MG1655	ldhL	ldhA, mgsA, pta, adhE, frdA	microaerobic	glycerol	no		knockout, heterologous, upregulation	Mazumdar2010	ldhL (Streptococcus bovis)
+Lim2013-wu	2013	1-Butanol	none	JHL85	W3110	bcd etfAB	atoD, atoA, adhE, ldhA, paaF, paaG, paaH, frdA, frdB, frdC, frdD, pta	anaerobic	glucose	no		knockout, heterologous, upregulation	Lim2013a	adhE (Clostridium acetobutylicum), crt (Clostridium acetobutylicum), hbd (Clostridium acetobutylicum), ter (Treponema denticola), fdh1 (Saccharomyces cerevisiae)
+Ma2013-nl	2013	Succinate	none	BA016	K12 (CGSC 4401)	pyc	ldhA, pflB	anaerobic	glucose+LB	no		knockout, heterologous, upregulation		pyc (Lactococcus lactis)
+Lim2013-sy	2013	Butyrate	none	JHL26-pBASP	W3110	butyrate_crt_ter	atoD, atoA, adhE, ldhA, paaF, paaG, paaH, frdA, frdB, frdC, frdD, pta	anaerobic	glucose	no		knockout, heterologous, upregulation		crt (Clostridium acetobutylicum), hbd (Clostridium acetobutylicum), ter (Treponema denticola)
+Tran2014-mt	2014	H2	none	BW25113 frdC ldhA fdnG ppc narG mgsA hycA	BW25113	none	frdC, ldhA, fdnG, ppc, narG, mgsA, hycA	anaerobic	glycerol	no		knockout	Maeda2007	
+Saini2014-br	2014	Butyrate	none	BuT-8L	BL21	butyrate_crt_ter	ptsG, poxB, ldhA, frdA, adhE	anaerobic	glucose	no		knockout, heterologous, upregulation		crt (Clostridium acetobutylicum), hbd (Clostridium acetobutylicum), ter (Treponema denticola), phaA (Cupriavidus necator)
+Volker2014-pd	2014	Butyrate	none	BE1576	MG1655	butyrate_crt_ter	adhE, ldhA, ackA, pta, frdC	anaerobic	glucose+LB	no		knockout		
+Mazumdar2014-ea	2014	L-Lactate	none	DSM05-L	MG1655	ldhL	pta, adhE, frdA, ldhA, mgsA, lldD	microaerobic	mannitol	no		knockout, heterologous		ldhL (Streptococcus bovis/equinus)
+Laguna2015-zj	2015	1-Butanol	none	RKE09	BW25113	bcd etfAB	lptB, adhE, pta, ldhA, frdA, frdB, frdC, frdD	anaerobic	glucose+yeast extract	no		knockout, heterologous, upregulation		hbd (Clostridium acetobutylicum), crt (Clostridium acetobutylicum), ter (Treponema denticola)
+Kim2016-dy	2016	Crotonic acid	FBA	JC01	MG1655	crotonic_acid	ldhA poxB pta adhE frdA	anaerobic	glycerol	no		knockout, heterologous	Kim2015-od, Clomburg2012-zh	
+Iverson2016-nn	2016	Xylitol	none	AI21	E. coli B	xylitol_xr	frdB frdC ldhA ackA focA adhE ptsG xylB xylA	anaerobic	glucose+xylose	no		knockout, upregulation	Iverson2013-ng	
