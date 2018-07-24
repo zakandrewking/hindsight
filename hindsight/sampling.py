@@ -5,10 +5,10 @@ from hindsight import (setup_for_series, apply_design, apply_environment,
 from hindsight.variables import min_biomass
 
 try:
-    from minime.solve.symbolic import compile_expressions
-    from minime.core.MEReactions import MetabolicReaction
+    from cobrame.solve.symbolic import compile_expressions
+    from cobrame.core.MEReactions import MetabolicReaction
 except ImportError:
-    print('no minime')
+    print('no cobrame')
 
 import pandas as pd
 import numpy as np

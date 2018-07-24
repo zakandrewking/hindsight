@@ -8,10 +8,6 @@ RUN cd theseus && pip install -e .
 COPY data/prototype_*.pickle ./theseus/theseus/data/models/
 COPY data/iML1515.xml ./theseus/theseus/data/models/
 
-# install minime
-COPY minime minime
-RUN cd minime && pip install -e .
-
 # install soplex
 COPY lib lib
 RUN pip install lib/soplex-0.0.5b2-cp27-none-linux_x86_64.whl

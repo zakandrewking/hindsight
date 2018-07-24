@@ -19,9 +19,9 @@ from theseus import carbons_for_exchange_reaction, load_model, setup_model
 from theseus.bigg import download_model
 
 try:
-    from minime.solve.algorithms import binary_search, solve_at_growth_rate
+    from cobrame.solve.algorithms import binary_search, solve_at_growth_rate
 except ImportError:
-    print('no minime')
+    print('no cobrame')
 
 # --------------------------------------------------
 # Models

@@ -9,10 +9,10 @@ import pytest
 from pytest import raises
 
 try:
-    from minime.solve.algorithms import solve_at_growth_rate, binary_search
-    from minime.solve.symbolic import compile_expressions
+    from cobrame.solve.algorithms import solve_at_growth_rate, binary_search
+    from cobrame.solve.symbolic import compile_expressions
 except ImportError:
-    print('no minime')
+    print('no cobrame')
 
 DEBUG = False
 
