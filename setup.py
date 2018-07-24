@@ -14,5 +14,14 @@ setup(
         'matplotlib_venn',
         'seaborn',
         'sklearn',
+        'mpl_recipes',
+        'theseus',
+        'ipy_progressbar',
+        'bibtexparser',
+        'matplotlib',
+    ],
+    dependency_links=[
+        'git+https://github.com/zakandrewking/mpl_recipes.git#egg=mpl_recipes',
+        'git+https://github.com/zakandrewking/theseus.git#egg=theseus',
     ],
 )
