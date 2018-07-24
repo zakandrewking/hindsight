@@ -4,3 +4,6 @@ lib/
 .ipynb_checkpoints
 *.pyc
 *.pickle
+.DS_Store
+env/
+.mypy_cache/
