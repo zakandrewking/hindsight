@@ -19,8 +19,10 @@ setup(
         'ipy_progressbar',
         'bibtexparser',
         'matplotlib',
-        'cobrame',
     ],
+    extras_require = {
+        'cobrame':  ['cobrame'],
+    },
     dependency_links=[
         'git+https://github.com/zakandrewking/mpl_recipes.git#egg=mpl_recipes',
         'git+https://github.com/zakandrewking/theseus.git#egg=theseus',
